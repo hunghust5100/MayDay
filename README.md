@@ -1,14 +1,21 @@
 # DrMayDay App
 
-Ứng dụng di động của **Hệ thống Quản lý khám bệnh & Theo dõi Mề đay (DrMayDay)**, xây dựng bằng **React Native + Expo** (TypeScript, Expo Router).
+Ứng dụng di động của **Hệ thống Quản lý khám bệnh & Theo dõi Mề đay (DrMayDay)**, dành cho **bệnh nhân** và **bác sĩ**:
 
-| Thành phần    | Phiên bản |
-|---------------|-----------|
-| Expo SDK      | 58        |
-| React Native  | 0.88      |
-| React         | 19.3      |
-| TypeScript    | 6.0       |
+- **Bệnh nhân:** đăng ký/đăng nhập, khai báo bệnh án theo mẫu phiếu khám động, theo dõi tổn thương da (đợt bùng phát, vị trí, ảnh tiến triển), chấm điểm UAS7 hằng ngày, xem đơn thuốc và kết quả xét nghiệm, nhận thông báo đẩy.
+- **Bác sĩ:** tìm/tạo bệnh nhân, tiếp nhận và chốt bệnh án, xem câu trả lời và ảnh tổn thương, chỉ định xét nghiệm, kê đơn thuốc.
+
+| Thành phần    | Phiên bản / Công nghệ |
+|---------------|-----------------------|
+| Expo SDK      | 58 |
+| React Native  | 0.88 |
+| React         | 19.3 |
+| TypeScript    | 6.0 |
 | Điều hướng    | Expo Router (file-based routing) |
+| Giao diện     | NativeWind 4 (Tailwind CSS 3.4), tailwind-variants, Lucide icon, font Be Vietnam Pro |
+| Form          | react-hook-form + zod |
+| Dữ liệu       | TanStack Query (cache, phân trang), expo-secure-store (lưu JWT) |
+| Backend       | REST API `/api/v1`, xác thực JWT |
 
 ---
 
@@ -17,15 +24,11 @@
 - **Node.js** LTS v18 trở lên (kèm npm)
 - **Git**
 
-Kiểm tra:
-
 ```bash
 node -v
 npm -v
 git --version
 ```
-
-Nếu chưa có Node.js, tải bản LTS tại <https://nodejs.org>.
 
 ---
 
@@ -37,114 +40,131 @@ cd drmayday-app
 npm install
 ```
 
-> **Lưu ý về npm registry:** nếu máy cấu hình registry nội bộ (Nexus) mà tài khoản chưa có quyền truy cập, `npm install` sẽ báo lỗi `403 Forbidden`. Có 2 cách xử lý:
->
-> 1. Đăng nhập Nexus: `npm login --registry=<nexus-registry-url>`
-> 2. Cài một lần từ registry công khai (nếu chính sách cho phép):
->    ```bash
->    npm install --registry=https://registry.npmjs.org
->    ```
+> **npm registry:** file `.npmrc` của dự án cố định registry công khai `https://registry.npmjs.org/`, ghi đè cấu hình registry toàn máy (VD Nexus nội bộ) — chỉ áp dụng trong thư mục dự án.
 
-Khi thêm thư viện mới, luôn dùng `npx expo install <package>` (thay vì `npm install <package>`) để Expo chọn phiên bản tương thích với SDK.
+Thêm thư viện mới luôn dùng `npx expo install <package>` để chọn phiên bản tương thích với SDK.
+
+Cấu hình địa chỉ API: sao chép `.env.example` thành `.env` rồi sửa `EXPO_PUBLIC_API_URL` (chạy trên điện thoại thật thì dùng IP LAN của máy chạy backend, không dùng `localhost`).
+
+```bash
+cp .env.example .env
+```
 
 ---
 
-## 3. Chuẩn bị thiết bị kiểm thử
+## 3. Thiết bị kiểm thử
 
-Chọn **1 trong 2** cách:
-
-### Cách 1 — Điện thoại thật (nhanh nhất)
-
-1. Cài **Expo Go** từ App Store (iOS) hoặc Google Play (Android).
-2. Điện thoại và máy tính phải dùng **chung một mạng Wi-Fi**.
-
-### Cách 2 — Máy giả lập
-
-- **Android Emulator:** cài Android Studio → tải Android SDK → mở **Virtual Device Manager (AVD)** → tạo thiết bị ảo (VD: Pixel 7).
-- **iOS Simulator** (chỉ trên macOS): cài Xcode từ Mac App Store → **Settings › Components** → tải iOS Simulator.
+- **Điện thoại thật:** cài **Expo Go** (App Store / Google Play), điện thoại và máy tính dùng chung Wi-Fi.
+- **Android Emulator:** Android Studio → Android SDK → Virtual Device Manager → tạo thiết bị ảo.
+- **iOS Simulator** (chỉ macOS): Xcode → Settings › Components → tải iOS Simulator.
 
 ---
 
 ## 4. Chạy ứng dụng
 
-Khởi động Metro Bundler:
-
 ```bash
 npx expo start
-# hoặc
-npm start
 ```
 
-Terminal sẽ hiển thị mã QR và các phím tắt:
+| Thao tác                  | Cách làm |
+|---------------------------|----------|
+| Mở trên điện thoại        | Quét QR bằng Expo Go (Android) hoặc Camera (iOS) |
+| Android Emulator          | Nhấn `a` |
+| iOS Simulator             | Nhấn `i` |
+| Trình duyệt               | Nhấn `w` |
+| Tải lại                   | Nhấn `r` |
+| Developer menu            | Nhấn `m` |
 
-| Thao tác                    | Cách làm                                                        |
-|-----------------------------|-----------------------------------------------------------------|
-| Mở trên điện thoại          | Quét QR bằng **Expo Go** (Android) hoặc **Camera** (iOS)        |
-| Mở trên Android Emulator    | Nhấn `a`                                                        |
-| Mở trên iOS Simulator       | Nhấn `i`                                                        |
-| Mở trên trình duyệt (web)   | Nhấn `w`                                                        |
-| Tải lại ứng dụng            | Nhấn `r`                                                        |
-| Mở Developer menu           | Nhấn `m`                                                        |
-
-Nếu điện thoại không kết nối được qua Wi-Fi (mạng công ty chặn, khác subnet…), dùng chế độ tunnel:
-
-```bash
-npx expo start --tunnel
-```
+Điện thoại không kết nối được qua Wi-Fi (mạng công ty chặn, khác subnet…): `npx expo start --tunnel`.
 
 ---
 
-## 5. Các lệnh npm
+## 5. Các lệnh
 
-| Lệnh                     | Mô tả                                                                 |
-|--------------------------|-----------------------------------------------------------------------|
-| `npm start`              | Khởi động dev server (`expo start`)                                   |
-| `npm run android`        | Khởi động và mở trên Android                                          |
-| `npm run ios`            | Khởi động và mở trên iOS (cần macOS)                                  |
-| `npm run web`            | Khởi động và mở trên trình duyệt                                      |
-| `npm run lint`           | Kiểm tra code bằng ESLint (`expo lint`)                               |
-| `npm run reset-project`  | Chuyển code mẫu sang thư mục `example/` và tạo `src/app` trống        |
-| `npx tsc --noEmit`       | Kiểm tra kiểu TypeScript                                              |
-| `npx expo-doctor`        | Chẩn đoán lỗi cấu hình / phiên bản thư viện                           |
+| Lệnh               | Mô tả |
+|--------------------|-------|
+| `npm start`        | Khởi động dev server |
+| `npm run android`  | Mở trên Android |
+| `npm run ios`      | Mở trên iOS (cần macOS) |
+| `npm run web`      | Mở trên trình duyệt |
+| `npm run lint`     | Kiểm tra code (ESLint) |
+| `npx tsc --noEmit` | Kiểm tra kiểu TypeScript |
+| `npx expo-doctor`  | Chẩn đoán cấu hình / phiên bản thư viện |
 
 ---
 
-## 6. Cấu trúc thư mục
+## 6. Kiến trúc
+
+Kiến trúc phân lớp, chia module theo nghiệp vụ (feature-based) để tái sử dụng tối đa: hạ tầng và UI dùng chung viết một lần ở `core/` và `shared/`, mỗi nghiệp vụ gói gọn trong một thư mục `features/<module>`.
+
+### 6.1. Cấu trúc thư mục
 
 ```
-drmayday-app/
-├── app.json              # Cấu hình Expo (tên app, icon, splash, plugins…)
-├── package.json
-├── tsconfig.json         # Alias "@/*" → "src/*"
-├── assets/               # Ảnh, icon, splash
-├── scripts/
-│   └── reset-project.js
-└── src/
-    ├── app/              # Màn hình (Expo Router): mỗi file = 1 route
-    │   ├── _layout.tsx   # Layout gốc / navigator
-    │   ├── index.tsx     # Màn hình "/"
-    │   └── explore.tsx   # Màn hình "/explore"
-    ├── components/       # Component dùng chung
-    ├── constants/        # Theme, hằng số
-    └── hooks/            # Custom hooks
+src/
+├── app/                      # CHỈ định tuyến (Expo Router) — file route mỏng, render screen từ features
+│   ├── _layout.tsx           # Layout gốc
+│   ├── (auth)/               # Nhóm route chưa đăng nhập: đăng nhập, đăng ký, quên mật khẩu
+│   ├── (patient)/            # Nhóm route bệnh nhân
+│   └── (doctor)/             # Nhóm route bác sĩ
+│
+├── core/                     # Hạ tầng toàn ứng dụng (khởi tạo một lần)
+│   ├── api/                  # HTTP client, gắn JWT, chuẩn hóa Base Response, mã lỗi
+│   ├── auth/                 # Phiên đăng nhập, token, chặn route theo vai trò
+│   ├── config/               # Biến môi trường, cấu hình
+│   ├── storage/              # Secure storage, cache cục bộ
+│   ├── notifications/        # Khởi tạo push notification (FCM)
+│   └── providers/            # Gộp các Provider gốc
+│
+├── shared/                   # Code dùng chung, không phụ thuộc nghiệp vụ
+│   ├── ui/                   # Design system: component giao diện cơ bản
+│   ├── form/                 # Field nhập liệu, validation
+│   ├── hooks/                # Custom hook dùng chung
+│   ├── theme/                # Design token: màu, spacing, typography
+│   ├── utils/                # Hàm tiện ích thuần
+│   ├── constants/            # Hằng số dùng chung
+│   └── types/                # Kiểu dữ liệu dùng chung
+│
+└── features/                 # Module nghiệp vụ
+    ├── auth/                 # Xác thực tài khoản
+    ├── profile/              # Hồ sơ cá nhân
+    ├── facilities/           # Chi nhánh, khoa, phòng khám
+    ├── patients/             # Bác sĩ tìm kiếm & tạo bệnh nhân
+    ├── medical-records/      # Hồ sơ bệnh án
+    ├── dynamic-form/         # Hiển thị mẫu phiếu khám động
+    ├── uas7/                 # Chấm điểm UAS7
+    ├── prescriptions/        # Đơn thuốc
+    ├── labs/                 # Xét nghiệm
+    ├── media/                # Kho ảnh & ảnh đính kèm
+    ├── lesions/              # Theo dõi tổn thương da
+    └── notifications/        # Thông báo
 ```
 
-Quy ước: chỉ đặt **màn hình** trong `src/app/`; component, hook, service, util đặt ngoài `src/app/`.
+### 6.2. Cấu trúc một feature
 
----
+```
+features/<module>/
+├── api/          # Hàm gọi endpoint của module (dùng client ở core/api)
+├── types/        # Model & DTO theo đặc tả API
+├── hooks/        # Logic, state, gọi api
+├── components/   # UI riêng của module (ghép từ shared/ui)
+├── screens/      # Màn hình hoàn chỉnh, được app/ import
+└── index.ts      # Public API — bên ngoài chỉ import module qua file này
+```
 
-## 7. Tài liệu nghiệp vụ & API
+### 6.3. Quy tắc phụ thuộc
 
-Đặc tả API backend nằm ngoài repo, tại thư mục `../API/`:
+```
+app ──▶ features ──▶ core ──▶ shared
+           └───────────────────▲
+```
 
-- `Xác thực, quản lý tài khoản, người dùng, phân quyền.md` — 23 API cốt lõi: đăng ký, đăng nhập, hồ sơ, quản trị người dùng, vai trò, quyền hạn (RBAC).
+| Lớp | Được import | Không được import |
+|-----|-------------|-------------------|
+| `app` | `features`, `core`, `shared` | — |
+| `features` | `core`, `shared`, feature khác **chỉ qua `index.ts`** | `app`, file nội bộ của feature khác |
+| `core` | `shared` | `app`, `features` |
+| `shared` | thư viện ngoài | `app`, `features`, `core` |
 
-Base URL API: `/api/v1` · Xác thực bằng JWT qua header `Authorization: Bearer <token>`.
-
----
-
-## 8. Tham khảo
-
-- Expo docs (SDK 58): <https://docs.expo.dev/versions/v58.0.0/>
-- Expo Router: <https://docs.expo.dev/router/introduction/>
-- React Native: <https://reactnative.dev>
+- `app/` không chứa logic hay UI — mỗi route chỉ render một screen từ `features`.
+- Thứ gì dùng ở **từ 2 feature trở lên** chuyển xuống `shared/` (UI, hook, util) hoặc `core/` (hạ tầng).
+- Import theo alias `@/` (trỏ tới `src/`), ví dụ `@/shared/ui`, `@/features/auth`.

@@ -6,7 +6,7 @@
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "drmaydayapp",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
       "icon": "./assets/expo.icon"
     },
@@ -31,6 +31,14 @@
           "backgroundColor": "#208AEF",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
+        }
+      ],
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "DrMayDay cần truy cập thư viện ảnh để bạn gửi ảnh tổn thương da cho bác sĩ.",
+          "cameraPermission": "DrMayDay cần dùng camera để bạn chụp ảnh tổn thương da gửi cho bác sĩ."
         }
       ]
     ],
