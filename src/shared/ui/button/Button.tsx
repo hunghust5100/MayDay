@@ -19,6 +19,8 @@ const button = tv({
       outline: { base: 'border-[1.5px] border-primary bg-transparent', label: 'text-primary' },
       ghost: { base: 'bg-transparent', label: 'text-primary-strong' },
       danger: { base: 'bg-danger', label: 'text-on-primary' },
+      /** Thao tác nguy hiểm phụ (VD "Xóa" dưới cùng màn chi tiết). */
+      'danger-soft': { base: 'bg-danger-soft', label: 'text-danger-strong' },
     },
     size: {
       md: { base: 'h-[52px] px-5', label: 'text-md' },
@@ -38,6 +40,7 @@ const CONTENT_COLOR: Record<ButtonVariant, IconColor> = {
   outline: 'primary',
   ghost: 'primary-strong',
   danger: 'on-primary',
+  'danger-soft': 'danger',
 };
 
 export type ButtonProps = Omit<PressableProps, 'children'> &

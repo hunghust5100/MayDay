@@ -8,3 +8,6 @@ export type MedicalRecordStatus = 'pending' | 'in_progress' | 'completed' | 'can
 
 /** Mức độ trên thang 0–3 (UAS7: ngứa ISS7, sẩn phù HSS7). */
 export type SeverityLevel = 0 | 1 | 2 | 3;
+
+/** Giới tính theo enum của API. */
+export type Gender = 'male' | 'female' | 'other';

@@ -60,6 +60,8 @@ const fontSize = {
 const shadows = {
   card: '0px 1px 2px rgba(15,23,42,0.05), 0px 1px 3px rgba(15,23,42,0.06)',
   primary: '0px 8px 18px -8px rgba(13,148,136,1)',
+  /** Thẻ nổi trên nền (VD thẻ form đè lên header). */
+  raised: '0px 16px 36px -14px rgba(15,23,42,0.20), 0px 2px 6px rgba(15,23,42,0.04)',
   overlay: '0px 12px 32px -8px rgba(15,23,42,0.25)',
 };
 

@@ -50,12 +50,19 @@ export const session = {
     setState(token && user ? { status: 'signedIn', token, user } : { status: 'signedOut', token: null, user: null });
   },
 
-  /** Lưu phiên sau khi `login` thành công. */
-  async signIn(token: string, user: SessionUser) {
-    await Promise.all([
-      secureStorage.set(STORAGE_KEYS.accessToken, token),
-      secureStorage.setJSON(STORAGE_KEYS.sessionUser, user),
-    ]);
+  /**
+   * Bắt đầu phiên sau khi `login` thành công.
+   * `remember: false` → chỉ giữ trong bộ nhớ, đóng app là phải đăng nhập lại.
+   */
+  async signIn(token: string, user: SessionUser, { remember = true }: { remember?: boolean } = {}) {
+    if (remember) {
+      await Promise.all([
+        secureStorage.set(STORAGE_KEYS.accessToken, token),
+        secureStorage.setJSON(STORAGE_KEYS.sessionUser, user),
+      ]);
+    } else {
+      await Promise.all([secureStorage.remove(STORAGE_KEYS.accessToken), secureStorage.remove(STORAGE_KEYS.sessionUser)]);
+    }
     setState({ status: 'signedIn', token, user });
   },
 
@@ -63,7 +70,8 @@ export const session = {
   async updateUser(patch: Partial<SessionUser>) {
     if (state.status !== 'signedIn') return;
     const user = { ...state.user, ...patch };
-    await secureStorage.setJSON(STORAGE_KEYS.sessionUser, user);
+    // Chỉ ghi xuống máy nếu phiên đang được ghi nhớ.
+    if (await secureStorage.get(STORAGE_KEYS.accessToken)) await secureStorage.setJSON(STORAGE_KEYS.sessionUser, user);
     setState({ ...state, user });
   },
 

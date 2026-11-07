@@ -1,2 +1,2 @@
 // Public API: feature theo dõi tổn thương da
-export {};
+export { LesionsScreen } from './screens/LesionsScreen';

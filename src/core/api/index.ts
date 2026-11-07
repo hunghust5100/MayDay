@@ -1,4 +1,5 @@
 // Public API: HTTP client, interceptor JWT, Base Response, mã lỗi
+export { applyFieldErrors } from './applyFieldErrors';
 export { api, createFormData, type Page, type QueryParams, type RequestOptions, type UploadFile } from './client';
 export { ApiError, getErrorMessage, isApiError } from './errors';
 export { queryClient } from './query-client';

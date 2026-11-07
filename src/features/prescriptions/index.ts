@@ -1,2 +1,2 @@
 // Public API: feature đơn thuốc
-export {};
+export { PrescriptionsScreen } from './screens/PrescriptionsScreen';

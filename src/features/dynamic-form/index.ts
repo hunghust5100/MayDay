@@ -1,2 +1,2 @@
-// Public API: feature hiển thị mẫu phiếu khám động
-export {};
+// Public API: feature mẫu phiếu khám động
+export { TemplatesScreen } from './screens/TemplatesScreen';

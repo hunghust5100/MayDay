@@ -7,6 +7,7 @@ export { Button, type ButtonProps } from './button/Button';
 export { Calendar, type CalendarProps } from './calendar/Calendar';
 export { Card, type CardProps } from './card/Card';
 export { Chip, type ChipProps } from './chip/Chip';
+export { ComingSoonScreen, type ComingSoonScreenProps } from './coming-soon/ComingSoonScreen';
 export { ConfirmDialog, Dialog, type ConfirmDialogProps, type DialogProps } from './dialog/Dialog';
 export { Divider } from './divider/Divider';
 export { IconButton, type IconButtonProps } from './icon-button/IconButton';
@@ -21,6 +22,7 @@ export { PaginatedList, type PaginatedListProps } from './paginated-list/Paginat
 export { ProgressBar, type ProgressBarProps } from './progress-bar/ProgressBar';
 export { ScoreBarChart, type ScoreBar, type ScoreBarChartProps } from './score-bar-chart/ScoreBarChart';
 export { Screen, type ScreenProps } from './screen/Screen';
+export { ScreenTitle, type ScreenTitleProps } from './screen-title/ScreenTitle';
 export { SectionHeader, type SectionHeaderProps } from './section-header/SectionHeader';
 export { SegmentedControl, type SegmentedControlProps, type SegmentOption } from './segmented-control/SegmentedControl';
 export { Skeleton, type SkeletonProps } from './skeleton/Skeleton';

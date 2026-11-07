@@ -1,2 +1,4 @@
 // Public API: feature hồ sơ bệnh án
-export {};
+export { DoctorRecordsScreen } from './screens/DoctorRecordsScreen';
+export { MedicalRecordCreateScreen } from './screens/MedicalRecordCreateScreen';
+export { PatientRecordsScreen } from './screens/PatientRecordsScreen';

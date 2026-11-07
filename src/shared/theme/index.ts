@@ -7,5 +7,6 @@ export { colors, fontSize, fonts, radius, shadows };
 export const shadowStyle = {
   card: { boxShadow: shadows.card },
   primary: { boxShadow: shadows.primary },
+  raised: { boxShadow: shadows.raised },
   overlay: { boxShadow: shadows.overlay },
 } as const;

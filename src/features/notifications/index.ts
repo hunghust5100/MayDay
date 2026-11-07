@@ -1,2 +1,2 @@
 // Public API: feature thông báo
-export {};
+export { NotificationsScreen } from './screens/NotificationsScreen';

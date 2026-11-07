@@ -1,2 +1,2 @@
 // Public API: feature kho ảnh & ảnh đính kèm
-export {};
+export { MediaScreen } from './screens/MediaScreen';

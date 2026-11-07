@@ -1,2 +1,2 @@
 // Public API: feature xét nghiệm
-export {};
+export { LabsScreen } from './screens/LabsScreen';

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "drmayday-app",
+    "name": "MayDay",
     "slug": "drmayday-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,7 +20,7 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "output": "server",
+      "output": "single",
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
@@ -37,8 +37,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "DrMayDay cần truy cập thư viện ảnh để bạn gửi ảnh tổn thương da cho bác sĩ.",
-          "cameraPermission": "DrMayDay cần dùng camera để bạn chụp ảnh tổn thương da gửi cho bác sĩ."
+          "photosPermission": "MayDay cần truy cập thư viện ảnh để bạn gửi ảnh tổn thương da cho bác sĩ.",
+          "cameraPermission": "MayDay cần dùng camera để bạn chụp ảnh tổn thương da gửi cho bác sĩ."
         }
       ]
     ],
