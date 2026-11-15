@@ -39,7 +39,17 @@ const MESSAGES: Record<string, string> = {
   '3102': 'Admin role required',
   '3103': 'Doctor role required',
   '3104': 'Patient role required',
+  '3105': 'Doctor not assigned to this record',
   '3106': "Cannot access another user's data",
+  '4001': 'Medical record not found',
+  '4003': 'Medical record already completed',
+  '4004': 'Medical record not in pending status',
+  '4005': 'Already accepted by another doctor',
+  '4006': 'Classification options incomplete',
+  '4007': 'At least one answer required',
+  '4008': 'Question does not belong to this template',
+  '4009': 'Invalid medical record status',
+  '4101': 'Template not found',
   '9901': 'Internal server error',
 };
 
@@ -50,6 +60,9 @@ function httpStatusOf(code: string): number {
   if (code === '3006') return 409;
   if (code === '3007') return 404;
   if (code.startsWith('31')) return 403;
+  if (code === '4001' || code === '4101') return 404;
+  if (code === '4003' || code === '4004' || code === '4005') return 409;
+  if (code.startsWith('4')) return 400;
   if (code.startsWith('2') || code.startsWith('3')) return 400;
   return 500;
 }
@@ -74,6 +87,10 @@ export function ok(data: unknown = {}, total?: number): MockResponse {
   const body: BaseResponse = { code: '1000', message: 'OK', data };
   if (total !== undefined) body.total = total;
   return { status: 200, body };
+}
+
+export function created(data: unknown): MockResponse {
+  return { status: 201, body: { code: '1001', message: 'Created successfully', data } };
 }
 
 export function errorResponse(error: MockApiError): MockResponse {

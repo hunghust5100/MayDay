@@ -1,6 +1,7 @@
 import { toApiDateTime } from '@/shared/utils';
 
 import { MOCK_CONFIG, ROLE } from '../config';
+import { createClinicalSeed } from './clinical';
 import type {
   BranchRow,
   DepartmentRow,
@@ -239,6 +240,7 @@ export function createSeed(): MockDb {
   });
 
   return {
+    ...createClinicalSeed(),
     users,
     patients,
     staffs,

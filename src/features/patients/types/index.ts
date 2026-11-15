@@ -1,0 +1,20 @@
+import type { Gender } from '@/shared/types';
+export type Patient = {
+  user_id: number;
+  full_name: string;
+  phone: string;
+  gender: Gender | null;
+  year_of_birth: number | null;
+  career?: string | null;
+  ethnic?: string | null;
+  hamlet_address?: string | null;
+  commune_address?: string | null;
+  city_address?: string | null;
+  work_place?: string | null;
+  health_insurance_number?: string | null;
+  health_insurance_validate?: string | null;
+  next_of_kin_name?: string | null;
+  next_of_kin_phone?: string | null;
+};
+export type PatientFilters = { keyword?: string; gender?: Gender; min_year?: number; max_year?: number };
+export type CreatePatientRequest = Omit<Patient, 'user_id'> & { password: string };

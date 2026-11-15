@@ -2,3 +2,4 @@
 export { RoleStack, SignedInStack, SignedOutStack } from './guards';
 export { getRoleGroup, ROLE_GROUP_LABELS, ROLE_HOME, ROLE_IDS, type RoleGroup } from './roles';
 export { session, useSession, type SessionState, type SessionUser } from './session';
+export { canEditClinicalRecord, canCreatePatient } from './roles';

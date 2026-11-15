@@ -5,7 +5,7 @@ import { env } from '@/core/config';
 import { toast } from '@/shared/ui';
 
 import { ApiError } from './errors';
-import { SESSION_EXPIRED_CODES, SUCCESS_CODE } from './response-codes';
+import { SESSION_EXPIRED_CODES, SUCCESS_CODES } from './response-codes';
 
 type QueryValue = string | number | boolean | null | undefined;
 export type QueryParams = Record<string, QueryValue | readonly QueryValue[]>;
@@ -100,7 +100,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   }
   if (!json || typeof json.code !== 'string') throw new ApiError('BAD_RESPONSE', { httpStatus: response.status });
 
-  if (json.code !== SUCCESS_CODE) {
+  if (!SUCCESS_CODES.has(json.code)) {
     const error = new ApiError(json.code, { serverMessage: json.message, httpStatus: response.status });
     if (token && SESSION_EXPIRED_CODES.has(json.code)) await handleSessionExpired(error);
     throw error;
@@ -109,7 +109,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 }
 
 /**
- * Gọi REST API: tự gắn JWT, chuẩn hóa Base Response, ném `ApiError` (thông báo tiếng Việt) khi `code ≠ 1000`.
+ * Gọi REST API: tự gắn JWT, chuẩn hóa Base Response, nhận 1000/1001; mã khác ném `ApiError` tiếng Việt.
  * Các hàm trả thẳng `data`; `getPage` trả `{ items, total }` cho danh sách phân trang.
  */
 export const api = {

@@ -85,8 +85,9 @@ export const RESPONSE_MESSAGES: Record<string, string> = {
   '9903': 'Dịch vụ bên ngoài đang gặp sự cố. Vui lòng thử lại sau.',
 };
 
-/** Mã thành công duy nhất. */
+/** Giữ mã cũ để tương thích; API tạo mới có thể trả 1001. */
 export const SUCCESS_CODE = '1000';
+export const SUCCESS_CODES = new Set([SUCCESS_CODE, '1001']);
 
 /** Mã khiến phiên đăng nhập bị hủy (token sai/hết hạn/thiếu). */
 export const SESSION_EXPIRED_CODES = new Set(['3001', '3002', '3003']);

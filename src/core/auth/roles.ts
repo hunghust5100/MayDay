@@ -8,6 +8,10 @@ export const ROLE_IDS = {
   PATIENT: 3,
 } as const;
 
+/** Quy ước hiện tại khớp seed mock; backend luôn kiểm tra quyền cuối cùng. */
+export const canEditClinicalRecord = (roleId: number) => roleId === 2 || roleId === 6;
+export const canCreatePatient = (roleId: number) => roleId === 2 || roleId === 4 || roleId === 6;
+
 export type RoleGroup = 'admin' | 'staff' | 'patient';
 
 export function getRoleGroup(roleId: number): RoleGroup {
