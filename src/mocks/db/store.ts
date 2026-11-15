@@ -3,6 +3,7 @@ import { shortName, toApiDateTime } from '@/shared/utils';
 import { ROLE } from '../config';
 import type { Gender } from '../core/validate';
 import { createSeed, emptyPatient } from './seed';
+import type { createClinicalSeed } from './clinical';
 
 /** Các bảng của CSDL giả — đặt tên cột giống mô hình dữ liệu trong tài liệu API. */
 
@@ -54,13 +55,13 @@ export type PermissionRow = { id: number; name: string; description: string | nu
 
 export type RolePermissionRow = { id: number; role_id: number; permission_id: number; created_at: string };
 
-/** Cơ sở vật chất — mock mới có API đọc danh sách (branch02, dept02, room02). */
+/** Cơ sở vật chất — CRUD chi nhánh, khoa, phòng khám. */
 type Timestamps = { created_at: string; updated_at: string };
 export type BranchRow = Timestamps & { id: number; name: string; address: string; phone: string };
 export type DepartmentRow = Timestamps & { id: number; name: string; description: string | null; branch_id: number };
 export type RoomRow = Timestamps & { id: number; name: string; description: string | null; department_id: number | null };
 
-export type MockDb = {
+export type MockDb = ReturnType<typeof createClinicalSeed> & {
   users: Map<number, UserRow>;
   patients: Map<number, PatientRow>;
   staffs: Map<number, StaffRow>;

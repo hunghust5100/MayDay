@@ -106,8 +106,9 @@ Dùng khi `.env` đặt `EXPO_PUBLIC_API_MOCK=true` (xem [mục 7](#7-mock-api))
 | `npm run android`  | Mở trên Android |
 | `npm run ios`      | Mở trên iOS (cần macOS) |
 | `npm run web`      | Mở trên trình duyệt |
-| `npm run lint`     | Kiểm tra code (ESLint) |
-| `npx tsc --noEmit` | Kiểm tra kiểu TypeScript |
+| `npm run lint`     | Kiểm tra code (ESLint với cấu hình Expo) |
+| `npm run typecheck` | Kiểm tra kiểu TypeScript |
+| `npm run test:modules` | Kiểm thử hợp đồng API/mock và biểu mẫu |
 | `npx expo-doctor`  | Chẩn đoán cấu hình / phiên bản thư viện |
 
 ---
@@ -210,23 +211,28 @@ app ──▶ features ──▶ core ──▶ shared
 | | `/forgot-password`, `/reset-password` | Quên mật khẩu (gửi OTP), Đặt lại mật khẩu | ✅ |
 | | `/change-password` | Đổi mật khẩu (mọi vai trò) | ✅ |
 | Bệnh nhân — tab | `/patient` | Trang chủ (lối tắt chức năng) | ✅ |
-| | `/patient/records` | Bệnh án | 🚧 |
+| | `/patient/records` | Bệnh án cá nhân, lọc trạng thái | ✅ |
 | | `/patient/tracking` | Theo dõi (UAS7, tổn thương, kho ảnh) | ✅ |
 | | `/patient/notifications` | Thông báo | 🚧 |
 | | `/patient/account` | Tài khoản | ✅ |
 | Bệnh nhân — màn con | `/patient/profile`, `/patient/profile/edit` | Hồ sơ cá nhân, Sửa hồ sơ | ✅ |
-| | `/patient/records/new` | Khai báo bệnh án | 🚧 |
+| | `/patient/records/new` | Phân loại, điền phiếu, khai báo bệnh án | ✅ |
 | | `/patient/uas7`, `/patient/lesions` | Chấm điểm UAS7, Theo dõi tổn thương | 🚧 |
 | | `/patient/prescriptions`, `/patient/labs`, `/patient/media` | Đơn thuốc, Xét nghiệm, Kho ảnh | 🚧 |
 | Nhân viên y tế — tab | `/doctor` | Tổng quan (lối tắt chức năng) | ✅ |
-| | `/doctor/records`, `/doctor/patients`, `/doctor/notifications` | Bệnh án, Bệnh nhân, Thông báo | 🚧 |
+| | `/doctor/records`, `/doctor/patients` | Bệnh án, tìm/lọc bệnh nhân | ✅ |
+| | `/doctor/notifications` | Thông báo | 🚧 |
 | | `/doctor/account` | Tài khoản | ✅ |
-| Nhân viên y tế — màn con | `/doctor/patients/new` | Thêm bệnh nhân | 🚧 |
+| Nhân viên y tế — màn con | `/doctor/patients/new` | Thêm bệnh nhân và thông tin hồ sơ | ✅ |
+| | `/doctor/patients/[id]`, `/doctor/records/new` | Lịch sử bệnh nhân, tạo bệnh án | ✅ |
+| | `/patient/records/[id]`, `/doctor/records/[id]` | Chi tiết, câu trả lời, tiếp nhận và chốt theo vai trò | ✅ |
 | | `/doctor/prescriptions`, `/doctor/labs`, `/doctor/media` | Kê đơn, Xét nghiệm, Kho ảnh | 🚧 |
 | Admin — tab | `/admin` | Tổng quan (số liệu tài khoản, lối tắt) | ✅ |
 | | `/admin/users` | Người dùng: tìm kiếm, lọc, phân trang | ✅ |
 | | `/admin/rbac` | Phân quyền: vai trò (dạng cây), quyền hạn | ✅ |
-| | `/admin/facilities` | Cơ sở (chi nhánh, khoa, phòng) | 🚧 |
+| | `/admin/facilities` | Cơ sở: danh sách, lọc, thêm/sửa/xóa chi nhánh, khoa, phòng | ✅ |
+| | `/admin/facilities/[kind]/[id]` | Chi tiết/chỉnh sửa cơ sở; `id=new` để tạo | ✅ |
+| | `/admin/records`, `/admin/records/[id]` | Danh sách/chi tiết và xóa bệnh án | ✅ |
 | | `/admin/account` | Tài khoản | ✅ |
 | Admin — màn con | `/admin/users/new`, `/admin/users/new-staff` | Thêm người dùng, Thêm nhân viên y tế | ✅ |
 | | `/admin/users/[id]` | Chi tiết người dùng, khóa / mở khóa, xóa | ✅ |
@@ -239,7 +245,7 @@ app ──▶ features ──▶ core ──▶ shared
 
 ## 7. Mock API
 
-Backend giả chạy **ngay trong app** (`src/mocks/`), làm theo đúng tài liệu trong thư mục `API/`: cùng endpoint, Base Response, mã lỗi, JWT, phân trang. Mock chặn `fetch` tới `EXPO_PUBLIC_API_URL` nên `core/api` và code nghiệp vụ chạy y như khi nối backend thật. Đổi sang backend thật thì đặt `EXPO_PUBLIC_API_MOCK=false`, không phải sửa code.
+Backend giả chạy **ngay trong app** (`src/mocks/`), làm theo đặc tả giáo viên (xem [ghi chú tích hợp](docs/module-integration.md)): cùng endpoint, Base Response, mã lỗi, JWT, phân trang. Mock chặn `fetch` tới `EXPO_PUBLIC_API_URL` nên `core/api` và code nghiệp vụ chạy y như khi nối backend thật. Đổi sang backend thật thì đặt `EXPO_PUBLIC_API_MOCK=false`, không phải sửa code.
 
 **Bật / tắt:** `EXPO_PUBLIC_API_MOCK=true | false` trong `.env`, rồi khởi động lại dev server. Mỗi request được in ra console (`[mock] POST /auth/login → 1000`).
 
@@ -249,7 +255,9 @@ Backend giả chạy **ngay trong app** (`src/mocks/`), làm theo đúng tài li
 |----------|-----|
 | Xác thực và quản lý tài khoản người dùng | auth01–auth07 (signup, login, logout, forgot/reset/change password, create_staff), profile01–02 |
 | Quản trị người dùng, Phân Quyền | admin01–admin06, role01–02, perm01–04, roleperm01–03 |
-| Quản lý CSVC và Hạ tầng tổ chức | branch02, dept02, room02 (chỉ API đọc danh sách — cần cho tạo nhân viên / phân công) |
+| Quản lý CSVC và Hạ tầng tổ chức | branch01–05, dept01–05, room01–05 |
+| Quản lý bệnh nhân và bệnh án | docpat01–02, medrec01–08/10/11/13/14 (các API trong đặc tả) |
+| Phiếu khám động (tích hợp tối thiểu) | tmpl03: đọc cây mẫu để điền/xem bệnh án |
 
 Endpoint chưa mock trả `9901` và in cảnh báo `[mock] Chưa có mock cho …`.
 
@@ -262,3 +270,7 @@ Endpoint chưa mock trả `9901` và in cảnh báo `[mock] Chưa có mock cho �
 - **ID vai trò:** tài liệu chỉ chốt `3` = Bệnh nhân; `1` Admin, `2` Bác sĩ, `4`–`7` là giả định của mock, cần đối chiếu với backend.
 - **Chỉnh hành vi** (độ trễ, thời hạn token, OTP…) trong `src/mocks/config.ts`. VD đặt `tokenTtlSeconds: 30` để thử luồng token hết hạn (`3002`).
 - **Thêm mock cho module khác:** viết handler trong `src/mocks/handlers/`, khai báo route `[method, path, handler]` rồi đăng ký trong `src/mocks/server.ts`.
+
+## 8. CSVC, bệnh nhân và bệnh án
+
+Xem [hướng dẫn chạy thử, hợp đồng và các điểm cần đối chiếu backend](docs/module-integration.md). Hai module sử dụng HTTP client, query cache và design system có sẵn; không bổ sung backend hoặc công cụ quản lý mẫu.

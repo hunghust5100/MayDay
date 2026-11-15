@@ -5,15 +5,19 @@ import { adminUserRoutes } from './handlers/admin-users';
 import { authRoutes } from './handlers/auth';
 import { facilityRoutes } from './handlers/facilities';
 import { rbacRoutes } from './handlers/rbac';
+import { medicalRoutes } from './handlers/medical-records';
 
-const router = createRouter([...authRoutes, ...adminUserRoutes, ...rbacRoutes, ...facilityRoutes]);
+const router = createRouter([...authRoutes, ...adminUserRoutes, ...rbacRoutes, ...facilityRoutes, ...medicalRoutes]);
 
 /** Xử lý một request giả: tìm route → chạy handler → chuyển lỗi nghiệp vụ thành Base Response. */
 export async function handleMockRequest(req: Omit<MockRequest, 'params'>): Promise<MockResponse> {
   const route = router.match(req.method, req.path);
   if (!route) {
     console.warn(`[mock] Chưa có mock cho ${req.method} ${req.path}`);
-    return { status: 404, body: { code: '9901', message: `Mock not implemented: ${req.method} ${req.path}`, data: {} } };
+    return {
+      status: 404,
+      body: { code: '9901', message: `Mock not implemented: ${req.method} ${req.path}`, data: {} },
+    };
   }
   try {
     return await route.handler({ ...req, params: route.params });

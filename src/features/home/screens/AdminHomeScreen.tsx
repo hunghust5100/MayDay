@@ -36,6 +36,7 @@ export function AdminHomeScreen() {
           { label: 'Vai trò & quyền', icon: ShieldCheck, tone: 'amber', onPress: () => router.push('/admin/rbac') },
           { label: 'Chi nhánh & khoa', icon: Building2, tone: 'rose', onPress: () => router.push('/admin/facilities') },
           { label: 'Mẫu phiếu khám', icon: FileText, tone: 'teal', onPress: () => router.push('/admin/templates') },
+          { label: 'Hồ sơ bệnh án', icon: FileText, tone: 'indigo', onPress: () => router.push('/admin/records') },
         ]}
       />
     </Screen>

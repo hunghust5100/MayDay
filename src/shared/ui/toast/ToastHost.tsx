@@ -48,7 +48,7 @@ export function ToastHost() {
   const insets = useSafeAreaInsets();
 
   return (
-    <View pointerEvents="box-none" className="absolute left-4 right-4 gap-2" style={{ top: insets.top + 8 }}>
+    <View pointerEvents="box-none" className="absolute left-4 right-4 gap-2" style={{ top: insets.top + 60 }}>
       {items.map((item) => (
         <ToastView key={item.id} item={item} />
       ))}

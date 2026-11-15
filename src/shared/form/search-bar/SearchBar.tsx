@@ -30,7 +30,9 @@ export function SearchBar({
 }: SearchBarProps) {
   const term = useDebounce(value.trim(), debounce);
   const onSearchRef = useRef(onSearch);
-  onSearchRef.current = onSearch;
+  useEffect(() => {
+    onSearchRef.current = onSearch;
+  }, [onSearch]);
   const firstRun = useRef(true);
 
   useEffect(() => {
