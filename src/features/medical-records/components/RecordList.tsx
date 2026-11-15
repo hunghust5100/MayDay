@@ -5,6 +5,7 @@ import { MEDICAL_RECORD_STATUS } from '@/shared/constants';
 import { SelectField, NumberField } from '@/shared/form';
 import { Button, ListItem, PaginatedList, StatusBadge } from '@/shared/ui';
 import type { MedicalRecordStatus } from '@/shared/types';
+import { formatDateTime } from '@/shared/utils';
 import { useRecords } from '../hooks/useRecords';
 export function RecordList({ patientId, group }: { patientId?: number; group: 'patient' | 'doctor' | 'admin' }) {
   const router = useRouter();
@@ -46,7 +47,7 @@ export function RecordList({ patientId, group }: { patientId?: number; group: 'p
         renderItem={({ item }) => (
           <ListItem
             title={item.patient_name ?? `Bệnh án #${item.medical_record_id}`}
-            description={`BN #${item.patient_id} · ${item.created_at}`}
+            description={`BN #${item.patient_id} · ${formatDateTime(item.created_at)}`}
             trailing={<StatusBadge status={item.status} />}
             onPress={() => router.push(`/${group}/records/${item.medical_record_id}`)}
           />

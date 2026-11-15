@@ -11,3 +11,17 @@ export type SeverityLevel = 0 | 1 | 2 | 3;
 
 /** Giới tính theo enum của API. */
 export type Gender = 'male' | 'female' | 'other';
+
+export type {
+  AnswerInput,
+  ClinicalTemplate,
+  ConditionOperator,
+  ConditionRule,
+  ConditionRules,
+  FormActor,
+  FormOption,
+  FormQuestion,
+  FormSection,
+  FormValue,
+  FormValues,
+} from './clinical-form';

@@ -33,7 +33,7 @@ Module._load = function (request, ...args) {
 const { db, resetDb } = require('../src/mocks/db/store');
 const { issueToken } = require('../src/mocks/core/auth');
 const { handleMockRequest } = require('../src/mocks/server');
-const { validateForm, questionVisible, serializeAnswers } = require('../src/shared/utils/clinical-form');
+const { validateForm, questionVisible, serializeAnswers, canFill } = require('../src/shared/utils/clinical-form');
 const { api } = require('../src/core/api/client');
 const { managementApi, normalizeFacility } = require('../src/features/facilities/api/management-api');
 const { recordsApi } = require('../src/features/medical-records/api/records-api');
@@ -93,6 +93,9 @@ async function test(name, action) {
     await expect(1, 'DELETE', '/departments/' + dept.id);
     assert.equal(db.rooms.get(room.id).department_id, null);
     await expect(1, 'PUT', '/rooms/' + room.id, { department_id: 1 });
+    await expect(1, 'PUT', '/branches/' + branch.id, {}, '2001');
+    await expect(1, 'POST', '/branches', { name: 'Cơ sở thử', address: 'HN', phone: 'bad' }, '2004');
+    await expect(1, 'POST', '/branches', { name: 'Đã sửa', address: 'HN', phone: '0243869999' }, '2003');
     await expect(1, 'DELETE', '/rooms/' + room.id);
     await expect(1, 'DELETE', '/branches/' + branch.id);
     assert.equal(normalizeFacility({ id: '9', department_id: '2' }).id, 9);
@@ -306,6 +309,28 @@ async function test(name, action) {
       { question_id: 'b', parent_question_id: 'a' },
     ];
     assert.equal(questionVisible(cyclic[0], { a: 'yes', b: 'yes' }, cyclic), false);
+    assert.equal(canFill('patdoc', 'patient'), true);
+    assert.equal(canFill('patdoc', 'doctor'), true);
+    assert.equal(canFill('patdoc', 'readonly'), false);
+    const officialQuestions = [
+      { question_id: 'Q_ITCH', type_question: 'radio' },
+      {
+        question_id: 'Q_ITCH_LEVEL',
+        parent_question_id: 'Q_ITCH',
+        show_if_answer: { option_values: ['YES'] },
+        type_question: 'number',
+      },
+      {
+        question_id: 'Q_ITCH_SLEEP',
+        parent_question_id: 'Q_ITCH_LEVEL',
+        condition_rules: { logic: 'AND', rules: [{ question_id: 'Q_ITCH_LEVEL', operator: 'gte', value: 7 }] },
+        type_question: 'radio',
+      },
+    ];
+    assert.equal(questionVisible(officialQuestions[1], { Q_ITCH: 'NO' }, officialQuestions), false);
+    assert.equal(questionVisible(officialQuestions[1], { Q_ITCH: 'YES' }, officialQuestions), true);
+    assert.equal(questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 5 }, officialQuestions), false);
+    assert.equal(questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 8 }, officialQuestions), true);
   });
   await test('actual feature API adapters use the mock transport end-to-end', async () => {
     clientUser = { token: issueToken(db.users.get(1)) };

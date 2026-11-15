@@ -1,10 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
-import { canCreatePatient, useSession } from '@/core/auth';
+import { canCreatePatient, ROLE_IDS, useSession } from '@/core/auth';
 import {
   ClinicalForm,
+  questionVisible,
   serializeAnswers,
   useTemplate,
   validateForm,
@@ -15,12 +16,28 @@ import { AppHeader, Button, EmptyState, ErrorState, Screen, Spinner, Text, toast
 import { recordsApi } from '../api/records-api';
 import { useCreateRecord } from '../hooks/useRecords';
 import { createRecordSchema } from '../schemas';
+import type { ClassificationQuestion } from '../types';
+
+function buildClassifierTemplate(questions: ClassificationQuestion[]): ClinicalTemplate {
+  return {
+    code_template: 'classification',
+    name: 'Phân loại',
+    sections: [
+      {
+        section_id: 'classification',
+        title: 'Thông tin phân loại',
+        filled_by: 'patdoc',
+        questions: questions.map((q) => ({ ...q, is_required: q.is_required ?? true })),
+      },
+    ],
+  };
+}
 
 export function MedicalRecordCreateScreen() {
   const router = useRouter();
   const { patientId } = useLocalSearchParams<{ patientId?: string }>();
   const { user } = useSession();
-  const patient = user?.role_id === 3;
+  const patient = user?.role_id === ROLE_IDS.PATIENT;
   const [classification, setClassification] = useState<FormValues>({});
   const [values, setValues] = useState<FormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -32,18 +49,7 @@ export function MedicalRecordCreateScreen() {
   const template = useTemplate(classify.data?.template_id);
   const create = useCreateRecord();
   const actor = patient ? 'patient' : 'doctor';
-  const classifier: ClinicalTemplate = {
-    code_template: 'classification',
-    name: 'Phân loại',
-    sections: [
-      {
-        section_id: 'classification',
-        title: 'Thông tin phân loại',
-        filled_by: 'both',
-        questions: (questions.data ?? []).map((q) => ({ ...q, is_required: true })),
-      },
-    ],
-  };
+  const classifier = useMemo(() => buildClassifierTemplate(questions.data ?? []), [questions.data]);
   if (!user) return null;
   const allowed = patient || (canCreatePatient(user.role_id) && /^[1-9]\d*$/.test(patientId ?? ''));
   const submit = () => {
@@ -100,13 +106,16 @@ export function MedicalRecordCreateScreen() {
                       setErrors(validation);
                       if (Object.keys(validation).length) return;
                       classify.mutate(
-                        questions.data!.flatMap((q) => {
-                          const v = classification[q.question_id];
-                          return (Array.isArray(v) ? v : [v]).map((item) => ({
-                            question_id: q.question_id,
-                            option_value: String(item),
-                          }));
-                        }),
+                        (questions.data ?? [])
+                          .filter((q) => questionVisible(q, classification, questions.data ?? []))
+                          .flatMap((q) => {
+                            const v = classification[q.question_id];
+                            if (v == null || v === '') return [];
+                            return (Array.isArray(v) ? v : [v]).map((item) => ({
+                              question_id: q.question_id,
+                              option_value: String(item),
+                            }));
+                          }),
                         {
                           onSuccess: () => {
                             setValues({});

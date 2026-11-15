@@ -5,12 +5,20 @@
  */
 export const ROLE_IDS = {
   ADMIN: 1,
+  DOCTOR: 2,
   PATIENT: 3,
+  NURSE: 4,
+  DIRECTOR: 5,
+  HEAD_OF_DEPARTMENT: 6,
+  INTERN_DOCTOR: 7,
 } as const;
 
 /** Quy ước hiện tại khớp seed mock; backend luôn kiểm tra quyền cuối cùng. */
-export const canEditClinicalRecord = (roleId: number) => roleId === 2 || roleId === 6;
-export const canCreatePatient = (roleId: number) => roleId === 2 || roleId === 4 || roleId === 6;
+export const canEditClinicalRecord = (roleId: number) =>
+  roleId === ROLE_IDS.DOCTOR || roleId === ROLE_IDS.HEAD_OF_DEPARTMENT;
+
+export const canCreatePatient = (roleId: number) =>
+  roleId === ROLE_IDS.DOCTOR || roleId === ROLE_IDS.NURSE || roleId === ROLE_IDS.HEAD_OF_DEPARTMENT;
 
 export type RoleGroup = 'admin' | 'staff' | 'patient';
 

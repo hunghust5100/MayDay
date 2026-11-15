@@ -1,3 +1,4 @@
+import { MEDICAL_RECORD_STATUS } from '@/shared/constants';
 import type { AnswerInput, ClinicalTemplate, FormActor, FormValues } from '@/shared/types/clinical-form';
 import { canFill, validateForm } from '@/shared/utils/clinical-form';
 import { removeDiacritics } from '@/shared/utils';
@@ -130,7 +131,7 @@ function listRecords(req: MockRequest, patientId?: number) {
     if (patientId !== user.user_id) reject('3106');
   } else requirePermission(req, 'view_medical_records');
   const status = req.query.status;
-  if (status && !['draft', 'pending', 'in_progress', 'completed', 'cancelled'].includes(status)) reject('4009');
+  if (status && !(status in MEDICAL_RECORD_STATUS)) reject('4009');
   const patient = patientId ?? queryInt(req, 'patient_id');
   const rows = [...db.medical_records.values()]
     .filter((r) => (patient === undefined || r.patient_id === patient) && (!status || r.status === status))
@@ -201,6 +202,7 @@ function createPatient(req: MockRequest) {
 export const medicalRoutes: RouteDef[] = [
   ['GET', '/doctor/patients/search', searchPatients],
   ['POST', '/doctor/patients', createPatient],
+  ['POST', '/doctor/patients/create', createPatient],
   [
     'GET',
     '/templates/:id',

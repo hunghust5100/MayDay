@@ -26,7 +26,6 @@ const EXTRA_FIELDS = [
   ['work_place', 'Nơi làm việc'],
   ['health_insurance_number', 'Số thẻ BHYT'],
   ['next_of_kin_name', 'Họ tên người nhà'],
-  ['next_of_kin_phone', 'SĐT người nhà'],
 ] as const;
 export function PatientCreateScreen() {
   const router = useRouter();
@@ -111,6 +110,11 @@ export function PatientCreateScreen() {
             render={(field) => <TextField label={label} {...field} />}
           />
         ))}
+        <FormField
+          control={form.control}
+          name="next_of_kin_phone"
+          render={(field) => <PhoneField label="SĐT người nhà" {...field} />}
+        />
         <FormField
           control={form.control}
           name="health_insurance_validate"

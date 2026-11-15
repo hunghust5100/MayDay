@@ -6,14 +6,17 @@ import { Button, EmptyState, ErrorState, ListItem, Screen, ScreenTitle, Segmente
 import { facilityLabels, type FacilityKind } from '../api/management-api';
 import { useBranches, useDepartments, useRooms } from '../hooks/useFacilities';
 
+const ALL_FACILITIES = 0;
+const UNASSIGNED_DEPARTMENT = -1;
+
 export function FacilitiesScreen() {
   const router = useRouter();
   const [kind, setKind] = useState<FacilityKind>('branches');
-  const [branch, setBranch] = useState(0);
-  const [department, setDepartment] = useState(0);
+  const [branch, setBranch] = useState(ALL_FACILITIES);
+  const [department, setDepartment] = useState(ALL_FACILITIES);
   const branches = useBranches();
   const departments = useDepartments(branch || undefined);
-  const rooms = useRooms(department > 0 ? department : undefined);
+  const rooms = useRooms(department > ALL_FACILITIES ? department : undefined);
   const query = kind === 'branches' ? branches : kind === 'departments' ? departments : rooms;
   const rows =
     kind === 'branches'
@@ -21,7 +24,7 @@ export function FacilitiesScreen() {
       : kind === 'departments'
         ? departments.data
         : rooms.data?.filter((r) =>
-            department === -1
+            department === UNASSIGNED_DEPARTMENT
               ? r.department_id === null
               : !branch || departments.data?.some((d) => d.id === r.department_id),
           );
@@ -42,10 +45,10 @@ export function FacilitiesScreen() {
             value={branch}
             onChange={(v) => {
               setBranch(v);
-              setDepartment(0);
+              setDepartment(ALL_FACILITIES);
             }}
             options={[
-              { value: 0, label: 'Tất cả chi nhánh' },
+              { value: ALL_FACILITIES, label: 'Tất cả chi nhánh' },
               ...(branches.data ?? []).map((b) => ({ value: b.id, label: b.name })),
             ]}
           />
@@ -56,8 +59,8 @@ export function FacilitiesScreen() {
             value={department}
             onChange={setDepartment}
             options={[
-              { value: 0, label: 'Tất cả khoa' },
-              { value: -1, label: 'Phòng chưa thuộc khoa' },
+              { value: ALL_FACILITIES, label: 'Tất cả khoa' },
+              { value: UNASSIGNED_DEPARTMENT, label: 'Phòng chưa thuộc khoa' },
               ...(departments.data ?? []).map((d) => ({ value: d.id, label: d.name })),
             ]}
           />

@@ -1,6 +1,9 @@
 /** SĐT Việt Nam: 10 số, đầu 03/05/07/08/09 (mã lỗi API 2004). */
 export const VN_PHONE_REGEX = /^0[35789]\d{8}$/;
 
+/** SĐT liên hệ cơ sở y tế (hỗ trợ cả số cố định và định dạng có mã vùng). */
+export const FACILITY_PHONE_REGEX = /^[0-9+() .-]{8,20}$/;
+
 /** Bỏ khoảng trắng/dấu chấm/gạch, đổi `+84`/`84` thành `0`. */
 export function normalizePhone(value: string): string {
   const digits = value.replace(/[^\d+]/g, '');
@@ -11,6 +14,10 @@ export function normalizePhone(value: string): string {
 
 export function isValidPhone(value: string): boolean {
   return VN_PHONE_REGEX.test(normalizePhone(value));
+}
+
+export function isValidFacilityPhone(value: string): boolean {
+  return FACILITY_PHONE_REGEX.test(value.trim());
 }
 
 /** `0912345678` → `0912 345 678`. */

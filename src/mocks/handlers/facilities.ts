@@ -1,7 +1,9 @@
+import { isValidFacilityPhone } from '@/shared/utils';
+
 import { authenticate, requireAdmin } from '../core/auth';
 import { created, ok, reject, type MockRequest } from '../core/http';
 import type { RouteDef } from '../core/router';
-import { paramInt, queryInt, readBody, requireFields, reqString, reqInt, optString } from '../core/validate';
+import { optString, paramInt, queryInt, readBody, reqInt, reqString, requireAny, requireFields } from '../core/validate';
 import { db, nextId, nowString } from '../db/store';
 
 // Tài liệu: "Quản lý CSVC và Hạ tầng tổ chức" — mới mock các API đọc danh sách (cần cho tạo nhân viên / phân công).
@@ -85,6 +87,13 @@ function save(kind: 'branches' | 'departments' | 'rooms', req: MockRequest) {
   const id = inserting ? nextId(db[kind]) : paramInt(req, 'id');
   const previous = db[kind].get(id);
   if (!inserting && !previous) reject('2003');
+  const editableFields =
+    kind === 'branches'
+      ? ['name', 'address', 'phone']
+      : kind === 'departments'
+        ? ['name', 'description', 'branch_id']
+        : ['name', 'description', 'department_id'];
+  if (!inserting) requireAny(body, editableFields);
   const merged = { ...previous, ...body };
   requireFields(
     merged,
@@ -95,14 +104,23 @@ function save(kind: 'branches' | 'departments' | 'rooms', req: MockRequest) {
         : ['name', 'department_id'],
   );
   const name = reqString(merged, 'name').trim();
+  const normalizedName = name.toLowerCase();
   const stamp = { id, name, created_at: previous?.created_at ?? nowString(), updated_at: nowString() };
   if (kind === 'branches') {
     const phone = reqString(merged, 'phone').trim();
-    if (!/^[0-9+() .-]{8,20}$/.test(phone)) reject('2003');
+    if (!isValidFacilityPhone(phone)) reject('2004');
+    if ([...db.branches.values()].some((b) => b.id !== id && b.name.trim().toLowerCase() === normalizedName))
+      reject('2003');
     db.branches.set(id, { ...stamp, phone, address: reqString(merged, 'address').trim() });
   } else if (kind === 'departments') {
     const branchId = reqInt(merged, 'branch_id');
     if (!db.branches.has(branchId)) reject('2003');
+    if (
+      [...db.departments.values()].some(
+        (d) => d.id !== id && d.branch_id === branchId && d.name.trim().toLowerCase() === normalizedName,
+      )
+    )
+      reject('2003');
     if (
       previous &&
       'branch_id' in previous &&
@@ -116,6 +134,12 @@ function save(kind: 'branches' | 'departments' | 'rooms', req: MockRequest) {
   } else {
     const departmentId = reqInt(merged, 'department_id');
     if (!db.departments.has(departmentId)) reject('2003');
+    if (
+      [...db.rooms.values()].some(
+        (r) => r.id !== id && r.department_id === departmentId && r.name.trim().toLowerCase() === normalizedName,
+      )
+    )
+      reject('2003');
     if (
       previous &&
       'department_id' in previous &&

@@ -1,7 +1,7 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
-import { canEditClinicalRecord, getRoleGroup, useSession } from '@/core/auth';
+import { canEditClinicalRecord, getRoleGroup, ROLE_IDS, useSession } from '@/core/auth';
 import {
   ClinicalForm,
   serializeAnswers,
@@ -14,15 +14,19 @@ import { TextField } from '@/shared/form';
 import {
   AppHeader,
   Button,
+  Card,
   ConfirmDialog,
+  Divider,
   EmptyState,
   ErrorState,
+  InfoRow,
   Screen,
   Spinner,
   StatusBadge,
   Text,
   toast,
 } from '@/shared/ui';
+import { formatDateTime } from '@/shared/utils';
 import { useRecord, useRecordMutations } from '../hooks/useRecords';
 import { recordUpdateSchema } from '../schemas';
 import type { MedicalRecord, RecordAnswer, RecordSummary } from '../types';
@@ -61,7 +65,7 @@ function DetailForm({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<'completed' | 'cancelled' | 'delete' | null>(null);
   if (!user) return null;
-  const patient = user.role_id === 3;
+  const patient = user.role_id === ROLE_IDS.PATIENT;
   const doctor = canEditClinicalRecord(user.role_id);
   const assigned = doctor && record.assigned_doctor_id === user.user_id;
   const editable = patient
@@ -87,7 +91,7 @@ function DetailForm({
         router.back();
       } else {
         const body = recordUpdateSchema.parse({ status: confirm, instructions });
-        if (!(await saveAnswers())) {
+        if (confirm === 'completed' && !(await saveAnswers())) {
           setConfirm(null);
           return;
         }
@@ -102,11 +106,26 @@ function DetailForm({
   return (
     <Screen header={<AppHeader title={`Bệnh án #${record.medical_record_id}`} onBack={router.back} />}>
       <View className="gap-4">
-        <Text variant="h2">{summary?.patient_name ?? record.patient_name ?? `Bệnh nhân #${record.patient_id}`}</Text>
-        <StatusBadge status={record.status} />
-        <Text>Ngày tạo: {record.created_at}</Text>
-        <Text>Bác sĩ phụ trách: {record.assigned_doctor_id ? `#${record.assigned_doctor_id}` : 'Chưa tiếp nhận'}</Text>
-        {record.completed_at && <Text>Hoàn thành: {record.completed_at}</Text>}
+        <Card padding="lg" className="gap-1">
+          <View className="mb-2 flex-row items-center justify-between gap-2">
+            <Text variant="h2" className="flex-1">
+              {summary?.patient_name ?? record.patient_name ?? `Bệnh nhân #${record.patient_id}`}
+            </Text>
+            <StatusBadge status={record.status} />
+          </View>
+          <InfoRow label="Ngày tạo" value={formatDateTime(record.created_at)} />
+          <Divider />
+          <InfoRow
+            label="Bác sĩ phụ trách"
+            value={record.assigned_doctor_id ? `#${record.assigned_doctor_id}` : 'Chưa tiếp nhận'}
+          />
+          {record.completed_at && (
+            <>
+              <Divider />
+              <InfoRow label="Hoàn thành" value={formatDateTime(record.completed_at)} />
+            </>
+          )}
+        </Card>
         <Text variant="h3">{template.name}</Text>
         <ClinicalForm template={template} values={values} onChange={setValues} actor={actor} errors={errors} />
         {assigned && record.status === 'in_progress' ? (
@@ -191,7 +210,13 @@ function RecordDetail({ id }: { id: number }) {
       </Screen>
     );
   return (
-    <DetailForm key={id} record={detail.data} summary={summary.data} answers={answers.data} template={template.data} />
+    <DetailForm
+      key={`${id}-${detail.data.status}-${detail.data.updated_at ?? ''}`}
+      record={detail.data}
+      summary={summary.data}
+      answers={answers.data}
+      template={template.data}
+    />
   );
 }
 export function MedicalRecordDetailScreen() {

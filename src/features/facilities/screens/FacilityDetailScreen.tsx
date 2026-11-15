@@ -2,7 +2,21 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { FormField, SelectField, TextField, useZodForm } from '@/shared/form';
-import { AppHeader, Button, ConfirmDialog, EmptyState, ErrorState, Screen, Spinner, Text, toast } from '@/shared/ui';
+import {
+  AppHeader,
+  Button,
+  Card,
+  ConfirmDialog,
+  Divider,
+  EmptyState,
+  ErrorState,
+  InfoRow,
+  Screen,
+  Spinner,
+  Text,
+  toast,
+} from '@/shared/ui';
+import { formatDateTime, formatPhone } from '@/shared/utils';
 import { facilityLabels, isFacilityKind, type Facility, type FacilityKind } from '../api/management-api';
 import { useBranches, useDepartments } from '../hooks/useFacilities';
 import { useFacility, useFacilityMutation } from '../hooks/useFacilityManagement';
@@ -49,25 +63,42 @@ function FacilityForm({ kind, row }: { kind: FacilityKind; row?: Facility }) {
       <View className="gap-4">
         {!editing && row ? (
           <>
-            <Text variant="h2">{row.name}</Text>
-            {'address' in row && (
-              <>
-                <Text>{row.address}</Text>
-                <Text>{row.phone}</Text>
-              </>
-            )}
-            {'description' in row && <Text>{row.description || 'Chưa có mô tả'}</Text>}
-            {'branch_id' in row && (
-              <Text>Chi nhánh: {branches.data?.find((b) => b.id === row.branch_id)?.name ?? `#${row.branch_id}`}</Text>
-            )}
-            {'department_id' in row && (
-              <Text>
-                Khoa:{' '}
-                {row.department_id === null
-                  ? 'Chưa thuộc khoa'
-                  : (departments.data?.find((d) => d.id === row.department_id)?.name ?? `#${row.department_id}`)}
+            <Card padding="lg" className="gap-1">
+              <Text variant="h2" className="mb-2">
+                {row.name}
               </Text>
-            )}
+              {'address' in row && (
+                <>
+                  <InfoRow label="Địa chỉ" value={row.address} layout="stacked" />
+                  <Divider />
+                  <InfoRow label="Điện thoại" value={formatPhone(row.phone)} />
+                </>
+              )}
+              {'description' in row && (
+                <>
+                  <InfoRow label="Mô tả" value={row.description} layout="stacked" />
+                  <Divider />
+                </>
+              )}
+              {'branch_id' in row && (
+                <InfoRow
+                  label="Chi nhánh"
+                  value={branches.data?.find((b) => b.id === row.branch_id)?.name ?? `#${row.branch_id}`}
+                />
+              )}
+              {'department_id' in row && (
+                <InfoRow
+                  label="Khoa"
+                  value={
+                    row.department_id === null
+                      ? 'Chưa thuộc khoa'
+                      : (departments.data?.find((d) => d.id === row.department_id)?.name ?? `#${row.department_id}`)
+                  }
+                />
+              )}
+              <Divider />
+              <InfoRow label="Cập nhật" value={formatDateTime(row.updated_at)} />
+            </Card>
             <Button title="Chỉnh sửa" onPress={() => setEditing(true)} />
             <Button title="Xóa" variant="danger" onPress={() => setConfirm(true)} />
           </>
