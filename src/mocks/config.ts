@@ -1,3 +1,11 @@
+/** Development scenarios only. Restart/reload the app after changing seed flags. */
+export const MODULE_MOCK_SCENARIOS = {
+  emptyNotifications: false,
+  emptyTemplates: false,
+  /** Fail the next N list requests to exercise ErrorState/retry, without changing REST contracts. */
+  listFailures: { notifications: 0, templates: 0 },
+};
+
 /** Cấu hình mock API — chỉnh tại đây khi cần thử các tình huống khác. */
 export const MOCK_CONFIG = {
   /** Độ trễ giả lập mỗi request (ms): ngẫu nhiên trong khoảng [min, max]. */

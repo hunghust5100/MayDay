@@ -136,7 +136,7 @@ src/
 │   ├── auth/                 # Phiên đăng nhập, token, chặn route theo vai trò
 │   ├── config/               # Biến môi trường, cấu hình
 │   ├── storage/              # Secure storage, cache cục bộ
-│   ├── notifications/        # Khởi tạo push notification (FCM)
+│   ├── notifications/        # Vị trí dành cho hạ tầng push (chưa tích hợp FCM native)
 │   └── providers/            # Gộp các Provider gốc
 │
 ├── shared/                   # Code dùng chung, không phụ thuộc nghiệp vụ
@@ -158,7 +158,7 @@ src/
     ├── facilities/           # Chi nhánh, khoa, phòng khám
     ├── patients/             # Bác sĩ tìm kiếm & tạo bệnh nhân
     ├── medical-records/      # Hồ sơ bệnh án
-    ├── dynamic-form/         # Hiển thị mẫu phiếu khám động
+    ├── dynamic-form/         # Renderer bệnh án + quản lý/thiết kế/xem thử mẫu phiếu
     ├── uas7/                 # Chấm điểm UAS7
     ├── prescriptions/        # Đơn thuốc
     ├── labs/                 # Xét nghiệm
@@ -213,7 +213,7 @@ app ──▶ features ──▶ core ──▶ shared
 | Bệnh nhân — tab | `/patient` | Trang chủ (lối tắt chức năng) | ✅ |
 | | `/patient/records` | Bệnh án cá nhân, lọc trạng thái | ✅ |
 | | `/patient/tracking` | Theo dõi (UAS7, tổn thương, kho ảnh) | ✅ |
-| | `/patient/notifications` | Thông báo | 🚧 |
+| | `/patient/notifications` | Hộp thư, đọc/đọc tất cả, xóa, phân trang | ✅ |
 | | `/patient/account` | Tài khoản | ✅ |
 | Bệnh nhân — màn con | `/patient/profile`, `/patient/profile/edit` | Hồ sơ cá nhân, Sửa hồ sơ | ✅ |
 | | `/patient/records/new` | Phân loại, điền phiếu, khai báo bệnh án | ✅ |
@@ -221,7 +221,7 @@ app ──▶ features ──▶ core ──▶ shared
 | | `/patient/prescriptions`, `/patient/labs`, `/patient/media` | Đơn thuốc, Xét nghiệm, Kho ảnh | 🚧 |
 | Nhân viên y tế — tab | `/doctor` | Tổng quan (lối tắt chức năng) | ✅ |
 | | `/doctor/records`, `/doctor/patients` | Bệnh án, tìm/lọc bệnh nhân | ✅ |
-| | `/doctor/notifications` | Thông báo | 🚧 |
+| | `/doctor/notifications` | Hộp thư riêng, điều hướng theo vai trò | ✅ |
 | | `/doctor/account` | Tài khoản | ✅ |
 | Nhân viên y tế — màn con | `/doctor/patients/new` | Thêm bệnh nhân và thông tin hồ sơ | ✅ |
 | | `/doctor/patients/[id]`, `/doctor/records/new` | Lịch sử bệnh nhân, tạo bệnh án | ✅ |
@@ -239,7 +239,9 @@ app ──▶ features ──▶ core ──▶ shared
 | | `/admin/users/[id]/edit`, `/admin/users/[id]/assign` | Sửa người dùng, Phân công công tác | ✅ |
 | | `/admin/roles/new`, `/admin/roles/[id]` | Thêm vai trò, Quyền của vai trò (cấp / thu hồi) | ✅ |
 | | `/admin/permissions/new`, `/admin/permissions/[id]` | Thêm quyền, Sửa / xóa quyền | ✅ |
-| | `/admin/templates` | Mẫu phiếu khám | 🚧 |
+| | `/admin/templates` | Danh sách mẫu, lọc trạng thái, phân trang | ✅ |
+| | `/admin/templates/new`, `/admin/templates/[id]/edit` | Tạo/sửa thông tin mẫu | ✅ |
+| | `/admin/templates/[id]` | Cây nội dung, CRUD phần/câu hỏi/lựa chọn, preview và branching | ✅ |
 
 ---
 
@@ -257,7 +259,8 @@ Backend giả chạy **ngay trong app** (`src/mocks/`), làm theo đặc tả gi
 | Quản trị người dùng, Phân Quyền | admin01–admin06, role01–02, perm01–04, roleperm01–03 |
 | Quản lý CSVC và Hạ tầng tổ chức | branch01–05, dept01–05, room01–05 |
 | Quản lý bệnh nhân và bệnh án | docpat01–02, medrec01–08/10/11/13/14 (các API trong đặc tả) |
-| Phiếu khám động (tích hợp tối thiểu) | tmpl03: đọc cây mẫu để điền/xem bệnh án |
+| Phiếu khám động | 11 endpoint: CRUD mẫu, phần, câu hỏi/options; giữ tmpl03 đọc cây mẫu cho bệnh án |
+| Thông báo | 5 endpoint: danh sách, đọc một/tất cả, xóa, đăng ký token ở mức REST mock |
 
 Endpoint chưa mock trả `9901` và in cảnh báo `[mock] Chưa có mock cho …`.
 
@@ -273,4 +276,8 @@ Endpoint chưa mock trả `9901` và in cảnh báo `[mock] Chưa có mock cho �
 
 ## 8. CSVC, bệnh nhân và bệnh án
 
-Xem [hướng dẫn chạy thử, hợp đồng và các điểm cần đối chiếu backend](docs/module-integration.md). Hai module sử dụng HTTP client, query cache và design system có sẵn; không bổ sung backend hoặc công cụ quản lý mẫu.
+Xem [hướng dẫn chạy thử, hợp đồng và các điểm cần đối chiếu backend](docs/module-integration.md). Tài liệu này mô tả phạm vi CSVC/bệnh nhân/bệnh án ban đầu, khi phiếu khám chỉ có chức năng đọc. Phần quản lý mẫu bổ sung được mô tả ở mục 9; renderer và dữ liệu mẫu bệnh án cũ được giữ nguyên.
+
+## 9. Thông báo và bộ tạo mẫu phiếu khám động
+
+Đã hoàn thiện frontend và mock trong bộ nhớ; **chưa có backend thật**. Báo cáo tích hợp, phạm vi thay đổi và đề xuất toast dùng chung: [docs/notifications-dynamic-form-integration.md](docs/notifications-dynamic-form-integration.md).

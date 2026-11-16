@@ -1,7 +1,7 @@
 import { CircleAlert, CircleCheck, Info, TriangleAlert, type LucideIcon } from 'lucide-react-native';
 import { useEffect, useSyncExternalStore } from 'react';
 import { Pressable, View } from 'react-native';
-import Animated, { FadeOutUp, LinearTransition, SlideInUp } from 'react-native-reanimated';
+import Animated, { FadeIn, FadeOut, FadeOutUp, LinearTransition, ReduceMotion, SlideInUp } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { shadowStyle } from '@/shared/theme';
@@ -26,7 +26,10 @@ function ToastView({ item }: { item: ToastItem }) {
   }, [item.id, item.duration]);
 
   return (
-    <Animated.View entering={SlideInUp.springify().damping(18)} exiting={FadeOutUp} layout={LinearTransition}>
+    <Animated.View
+      entering={item.motion === 'fade' ? FadeIn.duration(160).reduceMotion(ReduceMotion.System) : SlideInUp.springify().damping(18)}
+      exiting={item.motion === 'fade' ? FadeOut.duration(120).reduceMotion(ReduceMotion.System) : FadeOutUp}
+      layout={item.motion === 'fade' ? undefined : LinearTransition}>
       <Pressable
         accessibilityRole="alert"
         onPress={() => dismissToast(item.id)}

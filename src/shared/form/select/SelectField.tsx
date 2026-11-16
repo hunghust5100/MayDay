@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 
 import { useDisclosure } from '@/shared/hooks';
-import { BottomSheet, Button, EmptyState, Icon, Text } from '@/shared/ui';
+import { BottomSheet, Button, ContentModal, EmptyState, Icon, Text } from '@/shared/ui';
 import { cn, removeDiacritics } from '@/shared/utils';
 
 import { FieldShell, type FieldBaseProps } from '../field/FieldShell';
@@ -81,8 +81,10 @@ type SelectBaseProps<T extends string | number> = FieldBaseProps &
     options: readonly SelectOption<T>[];
     /** Hiện ô tìm kiếm; mặc định bật khi có trên 8 lựa chọn. */
     searchable?: boolean;
-    /** Tiêu đề BottomSheet (mặc định = label). */
+    /** Tiêu đề cửa sổ (mặc định = label). */
     sheetTitle?: string;
+    /** Opt-in cho các module cần cửa sổ giữa màn hình, không hiệu ứng. Mặc định giữ BottomSheet. */
+    presentation?: 'sheet' | 'dialog';
   };
 
 export type SelectFieldProps<T extends string | number> = SelectBaseProps<T> & {
@@ -100,9 +102,11 @@ export function SelectField<T extends string | number>({
   placeholder,
   leftIcon,
   disabled,
+  presentation = 'sheet',
   ...shell
 }: SelectFieldProps<T>) {
   const sheet = useDisclosure();
+  const Popup = presentation === 'dialog' ? ContentModal : BottomSheet;
   const current = options.find((option) => option.value === value);
 
   return (
@@ -116,7 +120,7 @@ export function SelectField<T extends string | number>({
         accessibilityLabel={shell.label}
         onPress={sheet.open}
       />
-      <BottomSheet visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
+      <Popup visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
         <OptionList
           options={options}
           searchable={searchable ?? options.length > 8}
@@ -126,7 +130,7 @@ export function SelectField<T extends string | number>({
             sheet.close();
           }}
         />
-      </BottomSheet>
+      </Popup>
     </FieldShell>
   );
 }
@@ -146,9 +150,11 @@ export function MultiSelectField<T extends string | number>({
   placeholder,
   leftIcon,
   disabled,
+  presentation = 'sheet',
   ...shell
 }: MultiSelectFieldProps<T>) {
   const sheet = useDisclosure();
+  const Popup = presentation === 'dialog' ? ContentModal : BottomSheet;
   const [draft, setDraft] = useState<T[]>([]);
   const selected = value ?? [];
   const labels = options.filter((option) => selected.includes(option.value)).map((option) => option.label);
@@ -170,7 +176,7 @@ export function MultiSelectField<T extends string | number>({
         accessibilityLabel={shell.label}
         onPress={openSheet}
       />
-      <BottomSheet visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
+      <Popup visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
         <OptionList
           options={options}
           searchable={searchable ?? options.length > 8}
@@ -186,7 +192,7 @@ export function MultiSelectField<T extends string | number>({
             sheet.close();
           }}
         />
-      </BottomSheet>
+      </Popup>
     </FieldShell>
   );
 }

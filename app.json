@@ -40,7 +40,8 @@
           "photosPermission": "MayDay cần truy cập thư viện ảnh để bạn gửi ảnh tổn thương da cho bác sĩ.",
           "cameraPermission": "MayDay cần dùng camera để bạn chụp ảnh tổn thương da gửi cho bác sĩ."
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": true,

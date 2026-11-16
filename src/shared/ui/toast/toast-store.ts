@@ -6,6 +6,8 @@ export type ToastItem = {
   message: string;
   /** Thời gian hiển thị (ms). */
   duration: number;
+  /** Opt-in stationary feedback; other modules keep their existing animation. */
+  motion?: 'fade';
 };
 
 type Listener = () => void;
@@ -18,10 +20,10 @@ function emit() {
   listeners.forEach((listener) => listener());
 }
 
-function show(type: ToastType, message: string, duration = 3000) {
+function show(type: ToastType, message: string, duration = 3000, motion?: 'fade') {
   const id = nextId++;
   // Giữ tối đa 3 toast cùng lúc.
-  items = [...items.slice(-2), { id, type, message, duration }];
+  items = [...items.slice(-2), { id, type, message, duration, ...(motion ? { motion } : {}) }];
   emit();
   return id;
 }
@@ -47,7 +49,7 @@ export function getToasts() {
  * `toast.success('Đã lưu')`, `toast.error('Sai mật khẩu')`.
  */
 export const toast = {
-  success: (message: string, duration?: number) => show('success', message, duration),
+  success: (message: string, duration?: number, motion?: 'fade') => show('success', message, duration, motion),
   error: (message: string, duration?: number) => show('error', message, duration),
   warning: (message: string, duration?: number) => show('warning', message, duration),
   info: (message: string, duration?: number) => show('info', message, duration),

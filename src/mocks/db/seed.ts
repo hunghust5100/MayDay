@@ -2,6 +2,7 @@ import { toApiDateTime } from '@/shared/utils';
 
 import { MOCK_CONFIG, ROLE } from '../config';
 import { createClinicalSeed } from './clinical';
+import { createModuleSeed } from './module-seed';
 import type {
   BranchRow,
   DepartmentRow,
@@ -41,6 +42,7 @@ const PERMISSIONS: [id: number, name: string, description: string][] = [
   [11, 'submit_uas7', 'Chấm điểm UAS7'],
   [12, 'manage_lesions', 'Theo dõi tổn thương da'],
   [13, 'upload_images', 'Tải ảnh lên'],
+  [14, 'manage_own_notifications', 'Hộp thư cá nhân (quyền fixture mock, không phải mapping backend đã chốt)'],
 ];
 
 const ROLE_PERMISSIONS: Record<number, number[]> = {
@@ -235,12 +237,17 @@ export function createSeed(): MockDb {
   const rolePermissions: RolePermissionRow[] = Object.entries(ROLE_PERMISSIONS).flatMap(([roleId, permissionIds]) =>
     permissionIds.map((permissionId) => ({ id: 0, role_id: Number(roleId), permission_id: permissionId, created_at: SEED_TIME })),
   );
+  // Append grants so all existing role_permission IDs remain stable.
+  rolePermissions.push(...Object.keys(ROLE_PERMISSIONS).map((roleId) => ({
+    id: 0, role_id: Number(roleId), permission_id: 14, created_at: SEED_TIME,
+  })));
   rolePermissions.forEach((row, i) => {
     row.id = i + 1;
   });
 
   return {
     ...createClinicalSeed(),
+    ...createModuleSeed(),
     users,
     patients,
     staffs,

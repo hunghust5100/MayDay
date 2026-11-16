@@ -1,4 +1,4 @@
-import { MOCK_CONFIG } from './config';
+import { MOCK_CONFIG, MODULE_MOCK_SCENARIOS } from './config';
 import { errorResponse, MockApiError, type MockRequest, type MockResponse } from './core/http';
 import { createRouter } from './core/router';
 import { adminUserRoutes } from './handlers/admin-users';
@@ -6,8 +6,18 @@ import { authRoutes } from './handlers/auth';
 import { facilityRoutes } from './handlers/facilities';
 import { rbacRoutes } from './handlers/rbac';
 import { medicalRoutes } from './handlers/medical-records';
+import { notificationRoutes } from './handlers/notifications';
+import { templateRoutes } from './handlers/templates';
 
-const router = createRouter([...authRoutes, ...adminUserRoutes, ...rbacRoutes, ...facilityRoutes, ...medicalRoutes]);
+const router = createRouter([
+  ...authRoutes,
+  ...adminUserRoutes,
+  ...rbacRoutes,
+  ...facilityRoutes,
+  ...notificationRoutes,
+  ...templateRoutes,
+  ...medicalRoutes,
+]);
 
 /** Xử lý một request giả: tìm route → chạy handler → chuyển lỗi nghiệp vụ thành Base Response. */
 export async function handleMockRequest(req: Omit<MockRequest, 'params'>): Promise<MockResponse> {
@@ -20,6 +30,11 @@ export async function handleMockRequest(req: Omit<MockRequest, 'params'>): Promi
     };
   }
   try {
+    const key = req.path === '/notifications' ? 'notifications' : req.path === '/templates/all' ? 'templates' : undefined;
+    if (req.method === 'GET' && key && MODULE_MOCK_SCENARIOS.listFailures[key] > 0) {
+      MODULE_MOCK_SCENARIOS.listFailures[key]--;
+      throw new MockApiError('9901');
+    }
     return await route.handler({ ...req, params: route.params });
   } catch (error) {
     if (error instanceof MockApiError) return errorResponse(error);

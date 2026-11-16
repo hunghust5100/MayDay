@@ -1,7 +1,8 @@
 import { CalendarDays } from 'lucide-react-native';
+import { ScrollView } from 'react-native';
 
 import { useDisclosure } from '@/shared/hooks';
-import { BottomSheet, Calendar } from '@/shared/ui';
+import { BottomSheet, Calendar, ContentModal } from '@/shared/ui';
 import { formatDate, parseApiDate, toApiDate } from '@/shared/utils';
 
 import { FieldShell, type FieldBaseProps } from '../field/FieldShell';
@@ -15,6 +16,8 @@ export type DateFieldProps = FieldBaseProps & {
   maxDate?: Date;
   placeholder?: string;
   disabled?: boolean;
+  /** Mặc định giữ BottomSheet; dialog hiện giữa màn hình và không có hiệu ứng. */
+  presentation?: 'sheet' | 'dialog';
 };
 
 /** Chọn ngày (lịch trong BottomSheet), giá trị theo định dạng API `YYYY-MM-DD`. */
@@ -25,10 +28,21 @@ export function DateField({
   maxDate,
   placeholder = 'dd/mm/yyyy',
   disabled,
+  presentation = 'sheet',
   ...shell
 }: DateFieldProps) {
   const sheet = useDisclosure();
+  const Popup = presentation === 'dialog' ? ContentModal : BottomSheet;
   const date = parseApiDate(value);
+  const calendar = <Calendar
+    value={date}
+    minDate={minDate}
+    maxDate={maxDate}
+    onChange={(picked) => {
+      onChange(toApiDate(picked));
+      sheet.close();
+    }}
+  />;
 
   return (
     <FieldShell {...shell}>
@@ -41,17 +55,9 @@ export function DateField({
         accessibilityLabel={shell.label}
         onPress={sheet.open}
       />
-      <BottomSheet visible={sheet.isOpen} onClose={sheet.close} title={shell.label ?? 'Chọn ngày'}>
-        <Calendar
-          value={date}
-          minDate={minDate}
-          maxDate={maxDate}
-          onChange={(picked) => {
-            onChange(toApiDate(picked));
-            sheet.close();
-          }}
-        />
-      </BottomSheet>
+      <Popup visible={sheet.isOpen} onClose={sheet.close} title={shell.label ?? 'Chọn ngày'}>
+        {presentation === 'dialog' ? <ScrollView className="shrink grow-0" keyboardShouldPersistTaps="handled">{calendar}</ScrollView> : calendar}
+      </Popup>
     </FieldShell>
   );
 }

@@ -41,3 +41,10 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Local reference documents (root only; do not ignore src/features/*/api/)
+/API/
+
+# Local-only verification suite and artifacts for notifications/dynamic-form
+# Keep the team's tracked scripts/test-modules.cjs and docs/ reports.
+/tests/frontend-modules/
