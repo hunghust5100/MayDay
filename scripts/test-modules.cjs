@@ -38,6 +38,10 @@ const { api } = require('../src/core/api/client');
 const { managementApi, normalizeFacility } = require('../src/features/facilities/api/management-api');
 const { recordsApi } = require('../src/features/medical-records/api/records-api');
 const { patientsApi } = require('../src/features/patients/api/patients-api');
+const { notificationsApi } = require('../src/features/notifications/api/notifications-api');
+const { templatesApi } = require('../src/features/dynamic-form/api/templates-api');
+const { evaluateBranching } = require('../src/features/dynamic-form/utils/branching');
+const { questionSchemaForTemplate } = require('../src/features/dynamic-form/schemas');
 async function request(userId, method, target, body) {
   const url = new URL(target, 'http://test');
   return handleMockRequest({
@@ -364,6 +368,106 @@ async function test(name, action) {
     assert.equal((await recordsApi.summary(r.medical_record_id)).patient_name, 'Adapter');
     clientUser = { token: issueToken(db.users.get(1)) };
     await recordsApi.remove(r.medical_record_id);
+  });
+  await test('notifications 5 APIs, ownership, read-all ordering and FCM token upsert', async () => {
+    const page1 = await request(15, 'GET', '/notifications?page=1&limit=20');
+    assert.equal(page1.body.code, '1000');
+    assert.equal(page1.body.data.length, 20);
+    assert.equal(page1.body.total, 25);
+    assert.equal(page1.body.unread_count, 16);
+    const first = page1.body.data[0];
+    await expect(2, 'PUT', '/notifications/' + first.id, undefined, '3106');
+    await expect(15, 'PUT', '/notifications/99999', undefined, '9102');
+    const unread = page1.body.data.find((n) => n.is_read === 0);
+    assert.equal((await expect(15, 'PUT', '/notifications/' + unread.id)).is_read, 1);
+    assert.equal((await expect(15, 'PUT', '/notifications/read-all')).updated_count, 15);
+    assert.equal((await request(15, 'GET', '/notifications?page=1&limit=20')).body.unread_count, 0);
+    await expect(15, 'DELETE', '/notifications/' + unread.id);
+    await expect(15, 'DELETE', '/notifications/' + unread.id, undefined, '9102');
+    await expect(15, 'POST', '/notifications/register_token', { device_type: 'android' }, '9101');
+    await expect(15, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'windows' }, '2003');
+    const t1 = await expect(15, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'Android' });
+    const t2 = await expect(2, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'ios' });
+    assert.equal(t1.id, t2.id);
+    assert.equal(t2.user_id, 2);
+  });
+  await test('dynamic form 11 APIs, dynamic RBAC, clinical compatibility, 4105 and condition_rules integrity', async () => {
+    // Dynamic RBAC: nurse (4) lacks permission -> 3102; grant manage_templates (4) -> allowed
+    await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'RBAC' }, '3102');
+    await expect(1, 'POST', '/role_permissions', { role_id: 4, permissions: [4] });
+    const createdTmpl = await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'Phiếu tùy biến' });
+    assert.equal(createdTmpl.version, '1.0');
+    await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'Trùng' }, '4102');
+
+    // Section + custom-coded Questions + condition_rules reference
+    const sec = await expect(4, 'POST', '/templates/T_RBAC/sections', { title: 'Phần 1', order: 1, filled_by: 'patdoc' });
+    const q1 = await expect(4, 'POST', '/templates/sections/' + sec.section_id + '/questions', {
+      question_id: 'CUSTOM_CHOICE',
+      question_text: 'Có triệu chứng?',
+      type_question: 'radio',
+      order: 1,
+      is_required: 1,
+      options: [
+        { option_text: 'Có', option_value: 'CO', order: 1 },
+        { option_text: 'Không', option_value: 'KHONG', order: 2 },
+      ],
+    });
+    await expect(4, 'POST', '/templates/sections/' + sec.section_id + '/questions', {
+      question_id: 'CUSTOM_DATE',
+      question_text: 'Ngày khởi phát',
+      type_question: 'date',
+      order: 2,
+      is_required: 1,
+      condition_rules: { logic: 'AND', rules: [{ question_id: q1.question_id, operator: 'eq', value: 'CO' }] },
+    });
+    const treeBefore = await expect(4, 'GET', '/templates/T_RBAC');
+
+    // Blocking incompatible edit on q1 while qDate depends on 'CO'
+    const schemaCheck = questionSchemaForTemplate(treeBefore, sec.section_id, q1.question_id).safeParse({
+      ...q1,
+      placeholder: '',
+      help_text: '',
+      options: [{ id: q1.options[1].id, option_text: 'Không', option_value: 'KHONG', order: 1, trigger_image_upload: 0 }],
+    });
+    assert.equal(schemaCheck.success, false);
+    await expect(
+      4,
+      'PUT',
+      '/templates/questions/' + q1.question_id,
+      { options: [{ id: q1.options[1].id, option_text: 'Không', option_value: 'KHONG', order: 1 }] },
+      '2003',
+    );
+
+    // Deleting q1 cleans up dangling condition_rules in qDate
+    await expect(4, 'DELETE', '/templates/questions/' + q1.question_id);
+    const treeAfter = await expect(4, 'GET', '/templates/T_RBAC');
+    const refreshedDate = treeAfter.sections[0].questions.find((q) => q.question_id === 'CUSTOM_DATE');
+    assert.equal(refreshedDate.condition_rules, null);
+
+    // Date support in clinical form validation/serialization
+    assert.equal(Object.keys(validateForm(treeAfter, { CUSTOM_DATE: '2026-11-17' }, 'doctor')).length, 0);
+    assert.ok(validateForm(treeAfter, { CUSTOM_DATE: '2026-02-30' }, 'doctor').CUSTOM_DATE);
+    assert.equal(serializeAnswers(treeAfter, { CUSTOM_DATE: '2026-11-17' }, 'doctor')[0].answer_text, '2026-11-17');
+
+    // Legacy clinical template reads cleanly via builder API adapter; TMPL_USED protection via real medical_records
+    clientUser = { token: issueToken(db.users.get(1)) };
+    const legacyDetail = await templatesApi.getDetail('TMPL_URT_CHRONIC');
+    assert.equal(legacyDetail.code_template, 'TMPL_URT_CHRONIC');
+    assert.equal(typeof legacyDetail.sections[0].section_id, 'number');
+    assert.deepEqual(legacyDetail.sections[0].questions.find((q) => q.question_id === 'Q_FOOD').show_if_answer, { option_values: ['food'] });
+
+    const demoDetail = await templatesApi.getDetail('TMPL_DEMO');
+    assert.equal(evaluateBranching(demoDetail, { Q_ITCH: 'YES', Q_LEVEL: 8 }).visible.Q_SLEEP, true);
+    assert.equal(evaluateBranching(demoDetail, { Q_ITCH: 'YES', Q_LEVEL: 5 }).visible.Q_SLEEP, false);
+
+    await expect(1, 'DELETE', '/templates/TMPL_USED', undefined, '4105');
+    await expect(4, 'DELETE', '/templates/T_RBAC');
+
+    // Test notificationsApi client wrapper
+    clientUser = { token: issueToken(db.users.get(15)) };
+    const notifPage = await notificationsApi.list({ page: 1, limit: 10 });
+    assert.equal(notifPage.total, 25);
+    assert.equal(notifPage.unread_count, 16);
   });
   console.log('\n' + checks + ' contract scenarios passed.');
 })().catch((error) => {

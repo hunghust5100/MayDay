@@ -8,6 +8,7 @@ export { Calendar, type CalendarProps } from './calendar/Calendar';
 export { Card, type CardProps } from './card/Card';
 export { Chip, type ChipProps } from './chip/Chip';
 export { ComingSoonScreen, type ComingSoonScreenProps } from './coming-soon/ComingSoonScreen';
+export { ContentModal, type ContentModalProps } from './content-modal/ContentModal';
 export { ConfirmDialog, Dialog, type ConfirmDialogProps, type DialogProps } from './dialog/Dialog';
 export { Divider } from './divider/Divider';
 export { IconButton, type IconButtonProps } from './icon-button/IconButton';

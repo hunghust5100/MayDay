@@ -76,10 +76,12 @@ function login(req: MockRequest) {
   return ok({ token: issueToken(user), user_info: toUserInfo(user) });
 }
 
-/** auth03 — Đăng xuất: đưa token hiện tại vào blacklist (`fcm_token` không bắt buộc, mock bỏ qua). */
+/** auth03 — Blacklist JWT and remove this user's device token when supplied. */
 function logout(req: MockRequest) {
-  const { jti } = authenticate(req);
+  const { user, jti } = authenticate(req);
+  const token = req.body && typeof req.body === 'object' ? (req.body as Record<string, unknown>).fcm_token : undefined;
   db.token_blacklist.add(jti);
+  for (const [id, row] of db.user_fcm_tokens) if (row.user_id === user.user_id && row.fcm_token === token) db.user_fcm_tokens.delete(id);
   return ok();
 }
 

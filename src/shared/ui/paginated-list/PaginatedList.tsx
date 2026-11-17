@@ -18,6 +18,10 @@ export type PaginatedListProps<T> = Omit<
   isError?: boolean;
   /** Bấm "Thử lại" ở trạng thái lỗi. */
   onRetry?: () => void;
+  errorDescription?: string;
+  /** Lỗi tải trang sau: giữ dữ liệu và chỉ thử lại khi người dùng yêu cầu. */
+  isNextPageError?: boolean;
+  onRetryNextPage?: () => void;
   /** Kéo xuống để làm mới. */
   onRefresh?: () => void;
   isRefreshing?: boolean;
@@ -45,6 +49,9 @@ export function PaginatedList<T>({
   isLoading,
   isError,
   onRetry,
+  errorDescription,
+  isNextPageError = false,
+  onRetryNextPage,
   onRefresh,
   isRefreshing = false,
   hasNextPage,
@@ -63,7 +70,7 @@ export function PaginatedList<T>({
 
   let emptyComponent: ReactElement;
   if (isLoading) emptyComponent = loadingComponent ?? <Spinner fill className="py-16" />;
-  else if (isError) emptyComponent = <ErrorState fill onRetry={onRetry} />;
+  else if (isError) emptyComponent = <ErrorState fill description={errorDescription} onRetry={onRetry} />;
   else emptyComponent = <EmptyState fill title={emptyTitle} description={emptyDescription} icon={emptyIcon} />;
 
   return (
@@ -74,7 +81,7 @@ export function PaginatedList<T>({
       keyboardShouldPersistTaps="handled"
       onEndReachedThreshold={0.4}
       onEndReached={() => {
-        if (hasNextPage && !isFetchingNextPage && !isLoading) fetchNextPage?.();
+        if (hasNextPage && !isFetchingNextPage && !isLoading && !isNextPageError) fetchNextPage?.();
       }}
       refreshControl={
         onRefresh ? (
@@ -88,7 +95,9 @@ export function PaginatedList<T>({
       }
       ListEmptyComponent={emptyComponent}
       ListFooterComponent={
-        isFetchingNextPage ? (
+        isNextPageError ? (
+          <ErrorState title="Chưa tải được trang tiếp theo" description={errorDescription} onRetry={onRetryNextPage} />
+        ) : isFetchingNextPage ? (
           <View className="py-4">
             <Spinner size="small" />
           </View>

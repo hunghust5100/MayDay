@@ -33,6 +33,7 @@ import {
   type UserRow,
 } from '../db/store';
 import type { MedicalRecordRow } from '../db/clinical';
+import { readClinicalTemplate } from '../db/template-reader';
 
 function requirePermission(req: MockRequest, name: string) {
   const { user } = authenticate(req);
@@ -64,7 +65,7 @@ function ensureWritable(record: MedicalRecordRow, user: UserRow) {
   }
 }
 function templateOf(id: string) {
-  const template = db.templates.get(id);
+  const template = readClinicalTemplate(id);
   if (!template) reject('4101', 'Template not found');
   return template;
 }
@@ -256,6 +257,8 @@ export const medicalRoutes: RouteDef[] = [
       const patientId = patient ? user.user_id : reqInt(body, 'patient_id');
       if (!db.patients.has(patientId)) reject('2003');
       const template = templateOf(reqString(body, 'template_id'));
+      // Builder-owned templates can be retired; existing records remain readable.
+      if (db.form_templates.get(template.code_template)?.is_active === 0) reject('4101');
       const answers = validateAnswers(body.answers ?? [], template, patient ? 'patient' : 'doctor');
       const now = nowString();
       const id = nextId(db.medical_records);

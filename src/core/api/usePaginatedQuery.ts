@@ -7,12 +7,14 @@ import type { Page } from './client';
 
 export type PageParams = { page: number; limit: number; signal: AbortSignal };
 
-export type UsePaginatedQueryOptions<T> = {
+export type UsePaginatedQueryOptions<T, TMeta extends object = object> = {
   queryKey: QueryKey;
-  /** Hàm gọi API của feature, nhận `page`/`limit`, trả `{ items, total }` (thường dùng `api.getPage`). */
-  queryFn: (params: PageParams) => Promise<Page<T>>;
+  /** Hàm gọi API của feature, nhận `page`/`limit`, trả `{ items, total, ...metadata }`. */
+  queryFn: (params: PageParams) => Promise<Page<T, TMeta>>;
   limit?: number;
   enabled?: boolean;
+  /** Opt in to detailed errors/manual next-page retry without changing existing screens. */
+  pageErrorFeedback?: boolean;
 };
 
 /**
@@ -23,7 +25,13 @@ export type UsePaginatedQueryOptions<T> = {
  * <PaginatedList {...listProps} renderItem={...} />
  * ```
  */
-export function usePaginatedQuery<T>({ queryKey, queryFn, limit = env.pageSize, enabled = true }: UsePaginatedQueryOptions<T>) {
+export function usePaginatedQuery<T, TMeta extends object = object>({
+  queryKey,
+  queryFn,
+  limit = env.pageSize,
+  enabled = true,
+  pageErrorFeedback = false,
+}: UsePaginatedQueryOptions<T, TMeta>) {
   const query = useInfiniteQuery({
     queryKey: [...queryKey, { limit }],
     initialPageParam: 1,
@@ -41,10 +49,17 @@ export function usePaginatedQuery<T>({ queryKey, queryFn, limit = env.pageSize, 
     ...query,
     items,
     total: query.data?.pages[0]?.total ?? 0,
+    /** Trang đầu tiên, dùng cho metadata ngoài `data` như `unread_count`. */
+    firstPage: query.data?.pages[0],
     listProps: {
       data: items,
       isLoading: query.isLoading,
       isError: query.isError && items.length === 0,
+      ...(pageErrorFeedback ? {
+        errorDescription: query.error instanceof Error ? query.error.message : undefined,
+        isNextPageError: query.isFetchNextPageError,
+        onRetryNextPage: () => query.fetchNextPage(),
+      } : {}),
       onRetry: () => query.refetch(),
       onRefresh: () => query.refetch(),
       isRefreshing: query.isRefetching && !query.isFetchingNextPage,

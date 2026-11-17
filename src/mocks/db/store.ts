@@ -2,8 +2,9 @@ import { shortName, toApiDateTime } from '@/shared/utils';
 
 import { ROLE } from '../config';
 import type { Gender } from '../core/validate';
-import { createSeed, emptyPatient } from './seed';
 import type { createClinicalSeed } from './clinical';
+import type { createModuleSeed } from './module-seed';
+import { createSeed, emptyPatient } from './seed';
 
 /** Các bảng của CSDL giả — đặt tên cột giống mô hình dữ liệu trong tài liệu API. */
 
@@ -61,7 +62,7 @@ export type BranchRow = Timestamps & { id: number; name: string; address: string
 export type DepartmentRow = Timestamps & { id: number; name: string; description: string | null; branch_id: number };
 export type RoomRow = Timestamps & { id: number; name: string; description: string | null; department_id: number | null };
 
-export type MockDb = ReturnType<typeof createClinicalSeed> & {
+export type MockDb = ReturnType<typeof createClinicalSeed> & ReturnType<typeof createModuleSeed> & {
   users: Map<number, UserRow>;
   patients: Map<number, PatientRow>;
   staffs: Map<number, StaffRow>;
@@ -129,6 +130,8 @@ export function deleteUser(userId: number) {
   db.users.delete(userId);
   db.patients.delete(userId);
   db.staffs.delete(userId);
+  for (const [id, row] of db.notifications) if (row.user_id === userId) db.notifications.delete(id);
+  for (const [id, row] of db.user_fcm_tokens) if (row.user_id === userId) db.user_fcm_tokens.delete(id);
 }
 
 // ---- Định dạng dữ liệu trả về (theo tài liệu) ----

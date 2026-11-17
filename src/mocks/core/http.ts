@@ -14,7 +14,7 @@ export type MockRequest = {
 
 export type MockResponse = { status: number; body: BaseResponse };
 
-type BaseResponse = { code: string; message: string; data: unknown; total?: number };
+type BaseResponse = { code: string; message: string; data: unknown; total?: number; unread_count?: number };
 
 /** Message theo bảng mã phản hồi chính thức (server trả tiếng Anh, client tự dịch). */
 const MESSAGES: Record<string, string> = {
@@ -50,6 +50,12 @@ const MESSAGES: Record<string, string> = {
   '4008': 'Question does not belong to this template',
   '4009': 'Invalid medical record status',
   '4101': 'Template not found',
+  '4102': 'Template code already exists',
+  '4103': 'Section not found',
+  '4104': 'Question not found',
+  '4105': 'Template in use cannot be deleted',
+  '9101': 'FCM token is required',
+  '9102': 'Notification not found',
   '9901': 'Internal server error',
 };
 
@@ -57,6 +63,9 @@ const MESSAGES: Record<string, string> = {
 function httpStatusOf(code: string): number {
   if (code === '1000') return 200;
   if (code === '3001' || code === '3002' || code === '3003') return 401;
+  if (code === '4102' || code === '4105') return 409;
+  if (['4101', '4103', '4104', '9102'].includes(code)) return 404;
+  if (code === '9101') return 400;
   if (code === '3006') return 409;
   if (code === '3007') return 404;
   if (code.startsWith('31')) return 403;
@@ -83,9 +92,10 @@ export function reject(code: string, message?: string): never {
 }
 
 /** Thành công: `{ code: "1000", message: "OK", data }` (+ `total` khi phân trang). */
-export function ok(data: unknown = {}, total?: number): MockResponse {
+export function ok(data: unknown = {}, total?: number, metadata?: { unread_count: number }): MockResponse {
   const body: BaseResponse = { code: '1000', message: 'OK', data };
   if (total !== undefined) body.total = total;
+  if (metadata) body.unread_count = metadata.unread_count;
   return { status: 200, body };
 }
 

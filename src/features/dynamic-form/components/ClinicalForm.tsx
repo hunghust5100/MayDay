@@ -1,6 +1,7 @@
 import { View } from 'react-native';
-import { CheckboxGroup, NumberField, RadioGroup, TextField } from '@/shared/form';
+import { CheckboxGroup, DateField, NumberField, RadioGroup, TextField } from '@/shared/form';
 import { Text } from '@/shared/ui';
+import { formatDate } from '@/shared/utils';
 import type { ClinicalTemplate, FormActor, FormValues } from '@/shared/types/clinical-form';
 import { canFill, isRequired, ordered, questionVisible } from '../utils/form';
 
@@ -37,10 +38,13 @@ export function ClinicalForm({
               const set = (next: FormValues[string]) => onChange({ ...values, [q.question_id]: next });
               const options = ordered(q.options ?? []).map((o) => ({ value: o.option_value, label: o.option_text }));
               if (!editable) {
-                const display = (Array.isArray(value) ? value : [value])
-                  .map((v) => options.find((o) => o.value === v)?.label ?? v)
-                  .filter((v) => v != null && v !== '')
-                  .join(', ');
+                const display =
+                  q.type_question === 'date' && typeof value === 'string' && value
+                    ? formatDate(value, value)
+                    : (Array.isArray(value) ? value : [value])
+                        .map((v) => options.find((o) => o.value === v)?.label ?? v)
+                        .filter((v) => v != null && v !== '')
+                        .join(', ');
                 return (
                   <View key={q.question_id} className="gap-1">
                     <Text weight="medium">{q.question_text}</Text>
@@ -66,6 +70,16 @@ export function ClinicalForm({
                     {...props}
                     decimal
                     value={typeof value === 'number' ? value : null}
+                    onChange={set}
+                  />
+                );
+              if (q.type_question === 'date')
+                return (
+                  <DateField
+                    key={q.question_id}
+                    {...props}
+                    placeholder={q.placeholder}
+                    value={typeof value === 'string' ? value : null}
                     onChange={set}
                   />
                 );

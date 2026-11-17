@@ -24,11 +24,11 @@ export type RequestOptions = {
   timeout?: number;
 };
 
-/** Base Response của server: `{ code, message, data, total? }`. */
-type BaseResponse<T> = { code: string; message: string; data: T; total?: number };
+/** Base Response của server: `{ code, message, data, total?, ...metadata }`. */
+type BaseResponse<T> = { code: string; message: string; data: T; total?: number; [key: string]: unknown };
 
-/** Kết quả một trang dữ liệu. */
-export type Page<T> = { items: T[]; total: number };
+/** Kết quả một trang dữ liệu, giữ lại metadata ngoài `data` (VD `unread_count`). */
+export type Page<T, TMeta extends object = object> = { items: T[]; total: number } & TMeta;
 
 function buildUrl(path: string, query?: QueryParams) {
   const url = `${env.apiUrl}${path.startsWith('/') ? path : `/${path}`}`;
@@ -74,7 +74,8 @@ async function request<T>(method: string, path: string, options: RequestOptions 
     controller.abort();
   }, timeout);
   const onExternalAbort = () => controller.abort();
-  signal?.addEventListener('abort', onExternalAbort);
+  if (signal?.aborted) controller.abort();
+  else signal?.addEventListener('abort', onExternalAbort);
 
   let response: Response;
   try {
@@ -116,9 +117,18 @@ export const api = {
   get: async <T>(path: string, options?: Omit<RequestOptions, 'body' | 'formData'>) =>
     (await request<T>('GET', path, options)).data,
 
-  getPage: async <T>(path: string, options?: Omit<RequestOptions, 'body' | 'formData'>): Promise<Page<T>> => {
+  getPage: async <T, TMeta extends object = object>(
+    path: string,
+    options?: Omit<RequestOptions, 'body' | 'formData'>,
+  ): Promise<Page<T, TMeta>> => {
     const res = await request<T[]>('GET', path, options);
-    return { items: res.data ?? [], total: res.total ?? res.data?.length ?? 0 };
+    const { code: _code, message: _message, data, total, ...metadata } = res;
+    return {
+      ...(metadata as TMeta),
+      // Transport metadata must not replace the canonical items/total used by existing callers.
+      items: data ?? [],
+      total: total ?? data?.length ?? 0,
+    } as Page<T, TMeta>;
   },
 
   post: async <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
