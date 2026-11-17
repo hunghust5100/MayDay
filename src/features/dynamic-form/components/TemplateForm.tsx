@@ -4,7 +4,7 @@ import { View } from 'react-native';
 import { FormField, SwitchField, TextField, useZodForm } from '@/shared/form';
 import { Button, Text } from '@/shared/ui';
 
-import { createTemplateSchema } from '../schemas';
+import { createTemplateSchema, updateTemplateSchema } from '../schemas';
 import type { TemplateSummary } from '../types';
 
 export type TemplateFormValues = z.output<typeof createTemplateSchema>;
@@ -16,7 +16,7 @@ export function TemplateForm({ initial, loading, errorMessage, duplicateCode, on
   duplicateCode?: boolean;
   onSubmit: (values: TemplateFormValues) => void;
 }) {
-  const form = useZodForm(createTemplateSchema, {
+  const form = useZodForm(initial ? updateTemplateSchema : createTemplateSchema, {
     defaultValues: {
       code_template: initial?.code_template ?? '',
       name: initial?.name ?? '',

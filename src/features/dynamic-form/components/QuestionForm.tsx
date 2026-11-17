@@ -46,6 +46,19 @@ export function QuestionForm({ template, section, initial, loading, errorMessage
   const errors = form.formState.errors;
   return <View className="gap-4">
     <Text tone="muted">Phần: {section.title}</Text>
+    <FormField control={form.control} name="question_id" render={(field) => (
+      <TextField
+        {...field}
+        label="Mã câu hỏi"
+        required
+        maxLength={50}
+        disabled={Boolean(initial) || loading}
+        placeholder="VD: Q_ITCH"
+        autoCapitalize="characters"
+        autoCorrect={false}
+        hint="Chữ in hoa, số và dấu gạch dưới. Mã không thể đổi sau khi tạo."
+      />
+    )} />
     <FormField control={form.control} name="question_text" render={(field) => <TextField {...field} label="Nội dung câu hỏi" required disabled={loading} multiline />} />
     <FormField control={form.control} name="type_question" render={(field) => <SelectField {...field} presentation="dialog" label="Loại câu hỏi" disabled={loading}
       options={Object.entries(QUESTION_LABELS).map(([value, label]) => ({ value: value as TemplateQuestion['type_question'], label }))}

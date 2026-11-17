@@ -48,5 +48,5 @@ export function createModuleSeed() {
   }
   if (MODULE_MOCK_SCENARIOS.emptyNotifications) notifications.clear();
   if (MODULE_MOCK_SCENARIOS.emptyTemplates) { form_templates.clear(); template_sections.clear(); questions.clear(); question_options.clear(); }
-  return { form_templates, template_sections, questions, question_options, notifications, user_fcm_tokens: new Map<number, DeviceTokenRow>(), used_template_codes: new Set(['TMPL_USED']) };
+  return { form_templates, template_sections, questions, question_options, notifications, user_fcm_tokens: new Map<number, DeviceTokenRow>() };
 }

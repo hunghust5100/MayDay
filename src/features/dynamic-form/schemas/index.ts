@@ -20,7 +20,7 @@ const templateFields = {
   is_active: flagSchema,
 };
 export const createTemplateSchema = z.object({ code_template: templateCodeSchema, ...templateFields });
-export const updateTemplateSchema = z.object(templateFields);
+export const updateTemplateSchema = z.object({ code_template: z.string().trim(), ...templateFields });
 
 export const sectionSchema = z.object({
   title: required('tiêu đề phần'),
@@ -111,9 +111,30 @@ export function questionSchemaForTemplate(template: TemplateDetail, sectionId: n
         issue('options', `Câu hỏi “${child.question_text}” vẫn đang dùng lựa chọn cũ làm điều kiện. Hãy sửa điều kiện của câu đó trước.`);
       }
     }
+    const existing = section.questions.find((item) => item.question_id === editingId);
+    // Editing a referenced question must not leave other questions' condition_rules pointing to missing options or incompatible types.
+    for (const dependent of all.filter((item) => item.question_id !== editingId && item.condition_rules?.rules.some((rule) => rule.question_id === editingId))) {
+      for (const rule of dependent.condition_rules!.rules.filter((item) => item.question_id === editingId)) {
+        const ruleValues = Array.isArray(rule.value) ? rule.value : [rule.value];
+        const isChoice = question.type_question === 'radio' || question.type_question === 'checkbox';
+        const wasChoice = existing?.type_question === 'radio' || existing?.type_question === 'checkbox';
+        const typeIncompatible =
+          (wasChoice && !isChoice) ||
+          (['gt', 'gte', 'lt', 'lte'].includes(rule.operator) && question.type_question !== 'number' && question.type_question !== 'date') ||
+          (existing && existing.type_question !== question.type_question && (existing.type_question === 'number' || existing.type_question === 'date' || question.type_question === 'number' || question.type_question === 'date'));
+        const missingOption = isChoice && ruleValues.some((value) => !question.options.some((option) => option.option_value === value));
+        if (typeIncompatible) {
+          issue('type_question', `Câu hỏi “${dependent.question_text}” đang tham chiếu câu này trong điều kiện hiển thị. Hãy sửa điều kiện của câu đó trước.`);
+          break;
+        }
+        if (missingOption) {
+          issue('options', `Câu hỏi “${dependent.question_text}” vẫn đang dùng lựa chọn cũ trong điều kiện hiển thị. Hãy sửa điều kiện của câu đó trước.`);
+          break;
+        }
+      }
+    }
     const optionIds = question.options.flatMap((option) => option.id === undefined ? [] : [option.id]);
     if (new Set(optionIds).size !== optionIds.length) issue('options', 'Danh sách có lựa chọn bị lặp. Vui lòng tải lại câu hỏi và thử lại.');
-    const existing = section.questions.find((item) => item.question_id === editingId);
     if (question.options.some((option) => option.id !== undefined && !existing?.options.some((item) => item.id === option.id))) {
       issue('options', 'Có lựa chọn không thuộc câu hỏi này. Vui lòng tải lại câu hỏi và thử lại.');
     }

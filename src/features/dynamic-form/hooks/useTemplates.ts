@@ -23,7 +23,7 @@ export function useTemplates(filters: TemplateFilters) {
   });
 }
 
-export function useTemplate(codeTemplate: string | undefined) {
+export function useBuilderTemplate(codeTemplate: string | undefined) {
   return useQuery({
     // Builder DTO is stricter than ClinicalTemplate; do not reuse the clinical renderer's cache entry.
     queryKey: [...TEMPLATES_QUERY_KEY, 'builder-detail', codeTemplate],
@@ -31,6 +31,8 @@ export function useTemplate(codeTemplate: string | undefined) {
     enabled: Boolean(codeTemplate),
   });
 }
+
+export { useBuilderTemplate as useTemplate };
 
 function useInvalidateTemplates() {
   const queryClient = useQueryClient();

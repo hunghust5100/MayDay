@@ -5,17 +5,19 @@ import { positiveId, strictInteger, strictPaging } from '../core/module-validate
 import type { RouteDef } from '../core/router';
 import { readBody, requireAny } from '../core/validate';
 import type { FormQuestionRow, FormTemplateRow } from '../db/form-types';
-import { db, nextId, nowString } from '../db/store';
+import { db, isPatientRole, nextId, nowString } from '../db/store';
 import { readBuilderTemplate, readClinicalTemplate, templateInUse } from '../db/template-reader';
 import { flag, identifier, nullableText, optionsFor, questionFields, questionOptions, sectionFields, text, validateRelations } from './template-validation';
 
-/** Mock-only RBAC fixture: existing manage_templates permission; backend endpoint mapping remains unconfirmed. */
+/** Kiểm tra quyền thiết kế mẫu động qua RBAC `manage_templates` (Admin mặc định được phép, Bệnh nhân luôn bị chặn 3102). */
 function designer(req: MockRequest) {
   const { user } = authenticate(req);
   if (user.role_id === ROLE.ADMIN) return;
-  if (![ROLE.DOCTOR, ROLE.INTERN_DOCTOR, ROLE.HEAD_OF_DEPARTMENT].some((role) => role === user.role_id)) reject('3102');
+  if (isPatientRole(user.role_id)) reject('3102');
   const allowed = db.role_permissions.some((rp) => rp.role_id === user.role_id && db.permissions.get(rp.permission_id)?.name === 'manage_templates');
-  if (!allowed) reject('3101');
+  if (allowed) return;
+  if ([ROLE.DOCTOR, ROLE.INTERN_DOCTOR, ROLE.HEAD_OF_DEPARTMENT].some((role) => role === user.role_id)) reject('3101');
+  reject('3102');
 }
 const templateById = (id: string) => { const row = db.form_templates.get(id); if (!row) reject('4101'); return row; };
 const sectionById = (id: number) => { const row = db.template_sections.get(id); if (!row) reject('4103'); return row; };
@@ -78,8 +80,22 @@ function cascadeQuestions(ids: Set<string>) {
     changed = false;
     for (const q of db.questions.values()) if (q.parent_question_id && ids.has(q.parent_question_id) && !ids.has(q.question_id)) { ids.add(q.question_id); changed = true; }
   }
+  const affectedTemplates = new Set(
+    [...ids]
+      .map((id) => db.questions.get(id)?.section_id)
+      .map((sectionId) => (sectionId === undefined ? undefined : db.template_sections.get(sectionId)?.template_id))
+      .filter((templateId): templateId is string => Boolean(templateId)),
+  );
   for (const id of ids) db.questions.delete(id);
   for (const [id, row] of db.question_options) if (ids.has(row.question_id)) db.question_options.delete(id);
+  for (const q of db.questions.values()) {
+    const templateId = db.template_sections.get(q.section_id)?.template_id;
+    if (!templateId || !affectedTemplates.has(templateId) || !q.condition_rules) continue;
+    const remaining = q.condition_rules.rules.filter((rule) => !ids.has(rule.question_id));
+    if (remaining.length !== q.condition_rules.rules.length) {
+      q.condition_rules = remaining.length ? { ...q.condition_rules, rules: remaining } : null;
+    }
+  }
 }
 function deleteSectionRows(id: number) {
   const section = sectionById(id);

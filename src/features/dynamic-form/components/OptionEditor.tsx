@@ -18,6 +18,7 @@ export function OptionEditor({ value, onChange, disabled }: {
     {value.map((option, i) => <View key={option.id ?? `new-${i}`} className="gap-3 border-b border-border pb-4">
       <Text weight="semibold">Lựa chọn {i + 1}</Text>
       <TextField label={`Nội dung lựa chọn ${i + 1}`} value={option.option_text} onChange={(option_text) => patch(i, { option_text })} disabled={disabled} required />
+      <TextField label={`Giá trị lựa chọn ${i + 1}`} value={option.option_value} onChange={(option_value) => patch(i, { option_value })} disabled={disabled} required placeholder="VD: YES, NO" autoCapitalize="characters" autoCorrect={false} />
       <NumberField label={`Thứ tự lựa chọn ${i + 1}`} value={option.order} onChange={(order) => patch(i, { order: order ?? 0 })} disabled={disabled} required />
       <SwitchField label={`Yêu cầu ảnh khi chọn lựa chọn ${i + 1}`} value={option.trigger_image_upload === 1} onChange={(v) => patch(i, { trigger_image_upload: v ? 1 : 0 })} disabled={disabled} />
       <Button title={`Bỏ lựa chọn ${i + 1}`} variant="ghost" disabled={disabled} onPress={() => setRemoving(i)} />

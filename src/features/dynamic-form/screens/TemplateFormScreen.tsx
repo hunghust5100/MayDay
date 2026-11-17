@@ -5,7 +5,7 @@ import { getErrorMessage, isApiError } from '@/core/api';
 import { AppHeader, ErrorState, Screen, Spinner, toast } from '@/shared/ui';
 
 import { TemplateForm, type TemplateFormValues } from '../components/TemplateForm';
-import { useCreateTemplate, useTemplate, useUpdateTemplate } from '../hooks/useTemplates';
+import { useBuilderTemplate, useCreateTemplate, useUpdateTemplate } from '../hooks/useTemplates';
 
 function readCode(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -16,7 +16,7 @@ function readCode(value: string | string[] | undefined) {
 export function TemplateFormScreen({ mode }: { mode: 'create' | 'edit' }) {
   const router = useRouter();
   const code = readCode(useLocalSearchParams<{ id?: string | string[] }>().id);
-  const detail = useTemplate(mode === 'edit' ? code : undefined);
+  const detail = useBuilderTemplate(mode === 'edit' ? code : undefined);
   const create = useCreateTemplate();
   const update = useUpdateTemplate(code ?? '');
   const mutation = mode === 'create' ? create : update;

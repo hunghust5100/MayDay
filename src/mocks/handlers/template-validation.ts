@@ -112,7 +112,24 @@ export function validateRelations(q: FormQuestionRow, options: FormOptionRow[], 
     if (!referenced) reject('4104');
     if (db.template_sections.get(referenced.section_id)?.template_id !== templateId) reject('2003');
   }
-  if (editing) for (const child of db.questions.values()) {
-    if (child.parent_question_id === q.question_id && child.show_if_answer && (!['radio', 'checkbox'].includes(q.type_question) || child.show_if_answer.option_values.some((v) => !options.some((o) => o.option_value === v)))) reject('2003');
+  if (editing) {
+    const prev = db.questions.get(q.question_id);
+    const isChoice = q.type_question === 'radio' || q.type_question === 'checkbox';
+    const wasChoice = prev?.type_question === 'radio' || prev?.type_question === 'checkbox';
+    for (const item of db.questions.values()) {
+      if (item.parent_question_id === q.question_id && item.show_if_answer && (!isChoice || item.show_if_answer.option_values.some((v) => !options.some((o) => o.option_value === v)))) reject('2003');
+      if (item.question_id !== q.question_id && db.template_sections.get(item.section_id)?.template_id === templateId && item.condition_rules) {
+        for (const rule of item.condition_rules.rules) {
+          if (rule.question_id !== q.question_id) continue;
+          const ruleValues = Array.isArray(rule.value) ? rule.value : [rule.value];
+          const typeIncompatible =
+            (wasChoice && !isChoice) ||
+            (['gt', 'gte', 'lt', 'lte'].includes(rule.operator) && q.type_question !== 'number' && q.type_question !== 'date') ||
+            (prev && prev.type_question !== q.type_question && (prev.type_question === 'number' || prev.type_question === 'date' || q.type_question === 'number' || q.type_question === 'date'));
+          const missingOption = isChoice && ruleValues.some((v) => !options.some((o) => o.option_value === v));
+          if (typeIncompatible || missingOption) reject('2003');
+        }
+      }
+    }
   }
 }

@@ -9,10 +9,16 @@ import type {
   FormValues,
 } from '@/shared/types/clinical-form';
 
-export const SUPPORTED_QUESTION_TYPES = ['text', 'number', 'radio', 'checkbox'] as const;
+export const SUPPORTED_QUESTION_TYPES = ['text', 'number', 'date', 'radio', 'checkbox'] as const;
 
 const isSupportedQuestionType = (type: string) =>
   (SUPPORTED_QUESTION_TYPES as readonly string[]).includes(type);
+
+const isValidApiDate = (value: unknown) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
 
 export const isRequired = (value: unknown) => value === true || value === 1 || value === '1';
 
@@ -153,6 +159,8 @@ export function validateForm(template: ClinicalTemplate, values: FormValues, act
         (typeof value !== 'number' || !Number.isFinite(value))
       )
         errors[q.question_id] = 'Vui lòng nhập số hợp lệ';
+      if (q.type_question === 'date' && value != null && value !== '' && !isValidApiDate(value))
+        errors[q.question_id] = 'Vui lòng chọn ngày hợp lệ';
       if ((q.type_question === 'radio' || q.type_question === 'checkbox') && value != null && value !== '') {
         const selected = Array.isArray(value) ? value : [value];
         if (selected.some((v) => !q.options?.some((o) => o.option_value === v)))
@@ -184,7 +192,7 @@ export function serializeAnswers(template: ClinicalTemplate, values: FormValues,
                 answer_value: { value },
               },
             ];
-          if (q.type_question === 'text')
+          if (q.type_question === 'text' || q.type_question === 'date')
             return [
               { question_id: q.question_id, question_option_id: null, answer_text: String(value), answer_value: null },
             ];

@@ -12,7 +12,7 @@ import { TemplateContentEditor, type EditTarget } from '../components/TemplateCo
 import { TemplateDeleteDialog } from '../components/TemplateDeleteDialog';
 import { TemplateTree } from '../components/TemplateTree';
 import { TemplatePreview } from '../components/TemplatePreview';
-import { useTemplate } from '../hooks/useTemplates';
+import { useBuilderTemplate } from '../hooks/useTemplates';
 
 function readId(value: string | string[] | undefined) {
   return (Array.isArray(value) ? value[0] : value) || undefined;
@@ -21,7 +21,7 @@ function readId(value: string | string[] | undefined) {
 export function TemplateDetailScreen() {
   const router = useRouter();
   const code = readId(useLocalSearchParams<{ id?: string | string[] }>().id);
-  const query = useTemplate(code);
+  const query = useBuilderTemplate(code);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [deleting, setDeleting] = useState<DeleteTarget | null>(null);
