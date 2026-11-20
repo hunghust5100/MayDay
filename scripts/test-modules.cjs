@@ -42,6 +42,10 @@ const { notificationsApi } = require('../src/features/notifications/api/notifica
 const { templatesApi } = require('../src/features/dynamic-form/api/templates-api');
 const { evaluateBranching } = require('../src/features/dynamic-form/utils/branching');
 const { questionSchemaForTemplate } = require('../src/features/dynamic-form/schemas');
+const { uas7Api } = require('../src/features/uas7/api/uas7-api');
+const { prescriptionsApi } = require('../src/features/prescriptions/api/prescriptions-api');
+const { labsApi } = require('../src/features/labs/api/labs-api');
+const { toApiDate } = require('../src/shared/utils/date');
 async function request(userId, method, target, body) {
   const url = new URL(target, 'http://test');
   return handleMockRequest({
@@ -468,6 +472,67 @@ async function test(name, action) {
     const notifPage = await notificationsApi.list({ page: 1, limit: 10 });
     assert.equal(notifPage.total, 25);
     assert.equal(notifPage.unread_count, 16);
+  });
+  await test('uas7, prescriptions and labs contracts, permissions and adapters', async () => {
+    const today = toApiDate(new Date());
+    await expect(2, 'GET', '/uas7-scores/eligibility', undefined, '3104');
+    const elig = await expect(15, 'GET', '/uas7-scores/eligibility');
+    assert.equal(elig.eligible, true);
+    assert.equal(elig.medical_record_id, 5);
+    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 4, hss7: 1 }, '5003');
+    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 1, hss7: -1 }, '5004');
+    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, iss7: 1, hss7: 1 }, '5005');
+    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 3, score_date: today, iss7: 1, hss7: 1 }, '5001');
+    const score = await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 2, hss7: 3 }, '1001');
+    assert.equal(score.daily_score, 5);
+    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 1, hss7: 1 }, '5002');
+    await expect(17, 'GET', '/uas7-scores/patient/15', undefined, '3106');
+    assert.equal((await expect(15, 'GET', '/uas7-scores/patient/15')).length, 7);
+
+    // Prescriptions & Labs permissions + business rules
+    await expect(4, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] }, '3103');
+    await expect(15, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] }, '3103');
+    await expect(2, 'POST', '/prescriptions', { medical_record_id: 3, items: [{ medicine_name: 'Loratadine' }] }, '8003');
+    await expect(2, 'POST', '/prescriptions', { medical_record_id: 5, items: [] }, '8001');
+    await expect(2, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: '  ' }] }, '8002');
+    await expect(4, 'POST', '/lab-requests', { medical_record_id: 5, items: [{ test_name: 'IgE' }] }, '3103');
+    await expect(2, 'POST', '/lab-requests', { medical_record_id: 5, items: [] }, '8101');
+    await expect(2, 'POST', '/lab-requests', { medical_record_id: 5, items: [{ test_name: '' }] }, '8102');
+    await expect(17, 'GET', '/prescriptions/3', undefined, '3106');
+    await expect(17, 'GET', '/lab-results/3', undefined, '3106');
+
+    // Feature API adapters end-to-end
+    global.fetch = async (url, options = {}) => {
+      const parsed = new URL(url);
+      const result = await handleMockRequest({
+        method: options.method ?? 'GET',
+        path: parsed.pathname.replace('/api/v1', ''),
+        query: Object.fromEntries(parsed.searchParams),
+        headers: Object.fromEntries(Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v])),
+        body: options.body ? JSON.parse(options.body) : undefined,
+      });
+      return new Response(JSON.stringify(result.body), { status: result.status });
+    };
+    clientUser = { token: issueToken(db.users.get(2)) };
+    const createdRx = await prescriptionsApi.create({
+      medical_record_id: 5,
+      note: 'Tái khám sau 7 ngày',
+      items: [{ medicine_name: 'Cetirizine 10mg', dosage: '10mg', frequency: '1 viên/tối' }],
+    });
+    assert.equal(createdRx.items[0].medicine_name, 'Cetirizine 10mg');
+    assert.equal((await prescriptionsApi.listByRecord(5)).length, 1);
+
+    const createdLab = await labsApi.createRequest({
+      medical_record_id: 5,
+      items: [{ test_name: 'CRP định lượng' }],
+    });
+    assert.equal(createdLab.items[0].test_name, 'CRP định lượng');
+    assert.equal((await labsApi.getResults(5)).length, 2);
+
+    clientUser = { token: issueToken(db.users.get(15)) };
+    const uasElig = await uas7Api.checkEligibility();
+    assert.equal(uasElig.eligible, true);
+    assert.equal((await uas7Api.getHistory(15)).length, 7);
   });
   console.log('\n' + checks + ' contract scenarios passed.');
 })().catch((error) => {

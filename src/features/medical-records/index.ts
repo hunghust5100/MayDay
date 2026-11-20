@@ -5,3 +5,6 @@ export { PatientRecordsScreen } from './screens/PatientRecordsScreen';
 export { RecordsScreen } from './screens/RecordsScreen';
 export { MedicalRecordDetailScreen } from './screens/MedicalRecordDetailScreen';
 export { RecordList } from './components/RecordList';
+export { RecordSelector } from './components/RecordSelector';
+export { useRecord, useRecords } from './hooks/useRecords';
+export type { MedicalRecord } from './types';
