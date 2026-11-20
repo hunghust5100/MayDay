@@ -3,6 +3,7 @@ import { errorResponse, MockApiError, type MockRequest, type MockResponse } from
 import { createRouter } from './core/router';
 import { adminUserRoutes } from './handlers/admin-users';
 import { authRoutes } from './handlers/auth';
+import { clinicalCareRoutes } from './handlers/clinical-care';
 import { facilityRoutes } from './handlers/facilities';
 import { rbacRoutes } from './handlers/rbac';
 import { medicalRoutes } from './handlers/medical-records';
@@ -17,6 +18,7 @@ const router = createRouter([
   ...notificationRoutes,
   ...templateRoutes,
   ...medicalRoutes,
+  ...clinicalCareRoutes,
 ]);
 
 /** Xử lý một request giả: tìm route → chạy handler → chuyển lỗi nghiệp vụ thành Base Response. */

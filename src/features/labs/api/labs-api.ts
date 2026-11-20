@@ -1,20 +1,11 @@
-import { api } from '@/core/api/client';
+import { api } from '@/core/api';
 
-export interface LabRequestItem {
-  test_name: string;
-  description?: string;
-}
-
-export interface CreateLabRequestPayload {
-  medical_record_id: string;
-  note?: string;
-  items: LabRequestItem[];
-}
+import type { CreateLabRequestPayload, LabRequestResponse, LabResult } from '../types';
 
 export const labsApi = {
   createRequest: (payload: CreateLabRequestPayload) =>
-    api.post<any>('/api/v1/lab-requests', payload),
-    
-  getResults: (recordId: string) =>
-    api.get<any[]>(`/api/v1/lab-results/${recordId}`),
+    api.post<LabRequestResponse>('/lab-requests', payload),
+
+  getResults: (recordId: number, signal?: AbortSignal) =>
+    api.get<LabResult[]>(`/lab-results/${recordId}`, { signal }),
 };

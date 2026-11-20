@@ -1,24 +1,25 @@
-export interface Uas7Eligibility {
-  eligible: string; // "true" hoặc "false"
-  medical_record_id?: string;
-}
+export type Uas7Eligibility = {
+  eligible: boolean;
+  medical_record_id: number | null;
+};
 
-export interface Uas7Score {
-  patient_id: string;
-  medical_record_id: string;
+export type Uas7Score = {
+  id: number;
+  patient_id: number;
+  medical_record_id: number;
   score_date: string;
-  iss7: string;
-  hss7: string;
-  daily_score: string;
-  note?: string;
+  iss7: number;
+  hss7: number;
+  daily_score: number;
+  note: string | null;
   created_at: string;
   updated_at: string;
-}
+};
 
-export interface CreateUas7Payload {
-  medical_record_id: string;
+export type CreateUas7Payload = {
+  medical_record_id: number;
   score_date: string; // YYYY-MM-DD
-  iss7: string;       // 0-3
-  hss7: string;       // 0-3
+  iss7: number; // 0-3 (điểm ngứa)
+  hss7: number; // 0-3 (điểm nốt sẩn phù)
   note?: string;
-}
+};

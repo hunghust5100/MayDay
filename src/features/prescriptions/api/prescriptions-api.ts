@@ -1,21 +1,10 @@
-import { apiClient } from '@/core/api/client';
+import { api } from '@/core/api';
 
-export interface PrescriptionItem {
-  medicine_name: string;
-  dosage?: string;
-  frequency?: string;
-  duration?: string;
-  instruction?: string;
-}
-
-export interface CreatePrescriptionPayload {
-  medical_record_id: string;
-  note?: string;
-  items: PrescriptionItem[];
-}
+import type { CreatePrescriptionPayload, Prescription } from '../types';
 
 export const prescriptionsApi = {
-  // rx01: Kê đơn
-  create: (payload: CreatePrescriptionPayload) =>
-    apiClient.post('/api/v1/prescriptions', payload).then(res => res.data.data),
+  listByRecord: (recordId: number, signal?: AbortSignal) =>
+    api.get<Prescription[]>(`/prescriptions/${recordId}`, { signal }),
+
+  create: (payload: CreatePrescriptionPayload) => api.post<Prescription>('/prescriptions', payload),
 };

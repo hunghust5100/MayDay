@@ -1,107 +1,233 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { FlaskConical, Plus, Trash2 } from 'lucide-react-native';
 import { useState } from 'react';
-import { Alert, TextInput, View } from 'react-native';
+import { useFieldArray } from 'react-hook-form';
+import { View } from 'react-native';
 
-import { ROLE_IDS, useSession } from '@/core/auth';
-import { AppHeader, Button, Card, Screen, Text } from '@/shared/ui';
-import { CreateLabRequestPayload, LabRequestItem, labsApi } from '../api/labs-api';
+import { canEditClinicalRecord, useSession } from '@/core/auth';
+import { RecordSelector } from '@/features/medical-records';
+import { FormField, TextField, useZodForm } from '@/shared/form';
+import {
+  AppHeader,
+  Badge,
+  Button,
+  Card,
+  Divider,
+  EmptyState,
+  ErrorState,
+  Screen,
+  SectionHeader,
+  Spinner,
+  Text,
+} from '@/shared/ui';
+import { formatDateTime } from '@/shared/utils';
 
-const MOCK_RECORD_ID = '123'; 
+import { useCreateLabRequest, useLabResults } from '../hooks/useLabs';
+import { labRequestSchema, type LabRequestFormValues } from '../schemas';
 
-export const LabsScreen = () => {
-  // Kiểm tra Role của người dùng đang đăng nhập
-  const { user } = useSession();
-  const isPatient = user?.role_id === ROLE_IDS.PATIENT;
+const EMPTY_ITEM = { test_name: '', description: '' };
 
-  const queryClient = useQueryClient();
-  const [testName, setTestName] = useState('');
-  const [description, setDescription] = useState('');
-  const [note, setNote] = useState('');
+function parseRecordId(raw: string | undefined): number | null {
+  if (!raw || !/^[1-9]\d*$/.test(raw)) return null;
+  return Number(raw);
+}
 
-  const { data: results, isLoading } = useQuery({
-    queryKey: ['lab-results', MOCK_RECORD_ID],
-    queryFn: () => labsApi.getResults(MOCK_RECORD_ID)
+/** Cận lâm sàng — chỉ định xét nghiệm (bác sĩ) và xem kết quả theo bệnh án (bác sĩ & bệnh nhân). */
+export function LabsScreen() {
+  const router = useRouter();
+  const { recordId: paramRecordId } = useLocalSearchParams<{ recordId?: string }>();
+  const auth = useSession();
+  const user = auth.status === 'signedIn' ? auth.user : null;
+  const canRequestLabs = user ? canEditClinicalRecord(user.role_id) : false;
+
+  const [recordId, setRecordId] = useState<number | null>(() => parseRecordId(paramRecordId));
+
+  const resultsQuery = useLabResults(recordId);
+  const createMutation = useCreateLabRequest(recordId);
+
+  const form = useZodForm(labRequestSchema, {
+    defaultValues: { note: '', items: [{ ...EMPTY_ITEM }] },
   });
 
-  const submitMutation = useMutation({
-    mutationFn: (payload: CreateLabRequestPayload) => labsApi.createRequest(payload),
-    onSuccess: () => {
-      Alert.alert('Thành công', 'Đã lưu yêu cầu xét nghiệm');
-      setTestName('');
-      setDescription('');
-      setNote('');
-      queryClient.invalidateQueries({ queryKey: ['lab-results', MOCK_RECORD_ID] });
-    },
-    onError: (err: any) => Alert.alert('Lỗi', err.message || 'Không thể gửi yêu cầu')
+  const { fields, append, remove } = useFieldArray({
+    control: form.control,
+    name: 'items',
   });
 
-  const onSubmit = () => {
-    if (!testName) return Alert.alert('Lỗi', 'Vui lòng nhập tên xét nghiệm');
-    
-    const items: LabRequestItem[] = [{ test_name: testName, description }];
-    submitMutation.mutate({
-      medical_record_id: MOCK_RECORD_ID,
-      note,
-      items,
-    });
-  };
+  const onBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  const onSubmit = form.handleSubmit((values: LabRequestFormValues) => {
+    if (!recordId) return;
+    createMutation.mutate(
+      {
+        medical_record_id: recordId,
+        note: values.note?.trim() || undefined,
+        items: values.items.map((item) => ({
+          test_name: item.test_name.trim(),
+          description: item.description?.trim() || undefined,
+        })),
+      },
+      {
+        onSuccess: () => {
+          form.reset({ note: '', items: [{ ...EMPTY_ITEM }] });
+        },
+      },
+    );
+  });
 
   return (
-    <Screen header={<AppHeader title="Cận Lâm Sàng" />} scroll>
-      
-      {/* Ẩn form yêu cầu xét nghiệm nếu là tài khoản Bệnh Nhân */}
-      {!isPatient && (
-        <Card className="p-4 mb-4 mt-2">
-          <Text className="text-lg font-bold text-gray-800 mb-4">Chỉ định Xét nghiệm mới</Text>
-          
-          <Text className="mb-1 text-gray-600">Tên xét nghiệm (Bắt buộc):</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-3 bg-white"
-            placeholder="Ví dụ: Định lượng IgE đặc hiệu"
-            value={testName}
-            onChangeText={setTestName}
-          />
+    <Screen header={<AppHeader title="Cận lâm sàng" onBack={onBack} />}>
+      <View className="gap-4">
+        <RecordSelector
+          value={recordId}
+          onChange={setRecordId}
+          initialRecordId={parseRecordId(paramRecordId)}
+        />
 
-          <Text className="mb-1 text-gray-600">Mô tả/Chỉ định chi tiết:</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-3 bg-white"
-            value={description}
-            onChangeText={setDescription}
-          />
+        {recordId !== null && canRequestLabs && (
+          <Card padding="lg" className="gap-4">
+            <SectionHeader
+              title="Chỉ định xét nghiệm mới"
+              actionLabel="Thêm xét nghiệm"
+              onAction={() => append({ ...EMPTY_ITEM })}
+            />
 
-          <Text className="mb-1 text-gray-600">Ghi chú chung:</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-4 bg-white"
-            value={note}
-            onChangeText={setNote}
-          />
+            {fields.map((fieldItem, index) => (
+              <View key={fieldItem.id} className="gap-3 rounded-card border border-border bg-bg p-3">
+                <View className="flex-row items-center justify-between">
+                  <Text variant="label">Xét nghiệm #{index + 1}</Text>
+                  {fields.length > 1 && (
+                    <Button
+                      title="Xóa"
+                      variant="danger-soft"
+                      size="sm"
+                      leftIcon={Trash2}
+                      onPress={() => remove(index)}
+                    />
+                  )}
+                </View>
 
-          <Button 
-            onPress={onSubmit} 
-            disabled={submitMutation.isPending}
-            title={submitMutation.isPending ? "Đang lưu..." : "Lưu chỉ định"}
-          />
-        </Card>
-      )}
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.test_name`}
+                  render={(field) => (
+                    <TextField
+                      label="Tên xét nghiệm"
+                      required
+                      placeholder="VD: Định lượng IgE đặc hiệu"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                      error={field.error}
+                    />
+                  )}
+                />
 
-      {/* Thẻ này hiện ra cho cả bác sĩ lẫn bệnh nhân để xem kết quả */}
-      <Card className="p-4 mt-2">
-        <Text className="text-lg font-bold text-gray-800 mb-3">Kết quả Cận lâm sàng</Text>
-        {isLoading ? (
-          <Text className="text-gray-500">Đang tải dữ liệu...</Text>
-        ) : (results?.length ?? 0) > 0 ? (
-          results?.map((lab: any, index: number) => (
-            <View key={index} className="border-b border-gray-200 py-3">
-              <Text className="font-semibold">{lab.test_name}</Text>
-              <Text className="text-sm text-gray-600 mt-1">
-                Kết quả: {lab.result_value || 'Chưa có kết quả (Pending)'}
-              </Text>
+                <FormField
+                  control={form.control}
+                  name={`items.${index}.description`}
+                  render={(field) => (
+                    <TextField
+                      label="Mô tả / Chỉ định chi tiết"
+                      placeholder="VD: Đánh giá dị ứng nguyên hô hấp"
+                      value={field.value}
+                      onChange={field.onChange}
+                      onBlur={field.onBlur}
+                    />
+                  )}
+                />
+              </View>
+            ))}
+
+            <FormField
+              control={form.control}
+              name="note"
+              render={(field) => (
+                <TextField
+                  label="Ghi chú chung"
+                  placeholder="Lưu ý lấy mẫu, nhịn ăn..."
+                  multiline
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                />
+              )}
+            />
+
+            <View className="gap-2">
+              <Button
+                title="Thêm xét nghiệm"
+                variant="soft"
+                leftIcon={Plus}
+                fullWidth
+                onPress={() => append({ ...EMPTY_ITEM })}
+              />
+              <Button
+                title={createMutation.isPending ? 'Đang lưu...' : 'Lưu chỉ định'}
+                fullWidth
+                loading={createMutation.isPending}
+                onPress={() => void onSubmit()}
+              />
             </View>
-          ))
-        ) : (
-          <Text className="text-gray-500 italic">Chưa có chỉ định/kết quả xét nghiệm nào.</Text>
+          </Card>
         )}
-      </Card>
+
+        {recordId !== null && (
+          <Card padding="lg" className="gap-3">
+            <SectionHeader title={`Kết quả cận lâm sàng · Bệnh án #${recordId}`} />
+            {resultsQuery.isLoading ? (
+              <Spinner />
+            ) : resultsQuery.isError ? (
+              <ErrorState onRetry={() => void resultsQuery.refetch()} />
+            ) : (resultsQuery.data?.length ?? 0) === 0 ? (
+              <EmptyState
+                icon={FlaskConical}
+                title="Chưa có chỉ định xét nghiệm"
+                description="Các xét nghiệm được chỉ định và kết quả sẽ hiển thị tại đây."
+              />
+            ) : (
+              <View className="gap-3">
+                {resultsQuery.data!.map((lab, index) => {
+                  const hasResult = Boolean(lab.result_value);
+                  return (
+                    <View key={lab.id}>
+                      {index > 0 && <Divider className="mb-3" />}
+                      <View className="gap-1.5">
+                        <View className="flex-row items-center justify-between gap-2">
+                          <Text weight="bold" className="flex-1">
+                            {lab.test_name}
+                          </Text>
+                          <Badge
+                            label={hasResult ? 'Đã có kết quả' : 'Đang chờ'}
+                            tone={hasResult ? 'success' : 'warning'}
+                          />
+                        </View>
+                        {lab.description && (
+                          <Text variant="caption" tone="muted">
+                            {lab.description}
+                          </Text>
+                        )}
+                        <Text variant="caption" tone={hasResult ? 'default' : 'muted'}>
+                          Kết quả: {lab.result_value || 'Chưa có kết quả'}
+                          {lab.reference_range ? ` (Tham chiếu: ${lab.reference_range})` : ''}
+                        </Text>
+                        {lab.note && (
+                          <Text variant="caption" tone="muted">
+                            Ghi chú: {lab.note}
+                          </Text>
+                        )}
+                        <Text variant="tiny" tone="subtle">
+                          Chỉ định lúc {formatDateTime(lab.created_at)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+              </View>
+            )}
+          </Card>
+        )}
+      </View>
     </Screen>
   );
-};
+}

@@ -1,89 +1,306 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import dayjs from 'dayjs';
-import { useState } from 'react';
-import { Alert, TextInput } from 'react-native';
+import { useRouter } from 'expo-router';
+import { Activity, CheckCircle2 } from 'lucide-react-native';
+import { useMemo } from 'react';
+import { View } from 'react-native';
 
-import { AppHeader, Button, Card, Screen, Text } from '@/shared/ui';
-import { uas7Api } from '../api/uas7-api';
-import { CreateUas7Payload } from '../types';
+import { useSession } from '@/core/auth';
+import { getSeverityColor } from '@/shared/constants';
+import { FormField, ScoreScale, TextField, useZodForm, type ScoreLevel } from '@/shared/form';
+import type { Tone } from '@/shared/types';
+import {
+  AppHeader,
+  Badge,
+  Button,
+  Card,
+  Divider,
+  EmptyState,
+  ErrorState,
+  Icon,
+  ScoreBarChart,
+  Screen,
+  SectionHeader,
+  Spinner,
+  StatCard,
+  Text,
+  type ScoreBar,
+} from '@/shared/ui';
+import { addDays, formatDate, startOfDay, toApiDate, weekdayShort } from '@/shared/utils';
 
-export const Uas7Screen = () => {
-  const queryClient = useQueryClient();
-  const [iss7, setIss7] = useState('');
-  const [hss7, setHss7] = useState('');
-  const [note, setNote] = useState('');
+import { useCreateUas7Score, useUas7Eligibility, useUas7History } from '../hooks/useUas7';
+import { uas7Schema, type Uas7FormValues } from '../schemas';
 
-  const { data: eligibility, isLoading: checking } = useQuery({
-    queryKey: ['uas7-eligibility'],
-    queryFn: uas7Api.checkEligibility
+const ISS7_LEVELS: readonly ScoreLevel[] = [
+  { value: 0, label: 'Không' },
+  { value: 1, label: 'Nhẹ' },
+  { value: 2, label: 'Trung bình' },
+  { value: 3, label: 'Nặng' },
+];
+
+const HSS7_LEVELS: readonly ScoreLevel[] = [
+  { value: 0, label: 'Không', description: '0 nốt' },
+  { value: 1, label: 'Nhẹ', description: '< 20 nốt' },
+  { value: 2, label: 'Trung bình', description: '20–50 nốt' },
+  { value: 3, label: 'Nặng', description: '> 50 nốt' },
+];
+
+function weeklySeverity(total: number): { label: string; tone: Tone } {
+  if (total === 0) return { label: 'Không có triệu chứng', tone: 'success' };
+  if (total <= 6) return { label: 'Kiểm soát tốt', tone: 'success' };
+  if (total <= 15) return { label: 'Nhẹ', tone: 'info' };
+  if (total <= 27) return { label: 'Trung bình', tone: 'warning' };
+  return { label: 'Nặng', tone: 'danger' };
+}
+
+function dailyTone(score: number): Tone {
+  if (score <= 1) return 'success';
+  if (score <= 3) return 'info';
+  if (score <= 4) return 'warning';
+  return 'danger';
+}
+
+/** Bệnh nhân — chấm điểm UAS7 hằng ngày và theo dõi biểu đồ 7 ngày. */
+export function Uas7Screen() {
+  const router = useRouter();
+  const auth = useSession();
+  const patientId = auth.status === 'signedIn' ? auth.user.user_id : undefined;
+
+  const eligibility = useUas7Eligibility(Boolean(patientId));
+  const history = useUas7History(patientId);
+  const submitMutation = useCreateUas7Score();
+
+  const todayKey = toApiDate(new Date());
+
+  const form = useZodForm(uas7Schema, {
+    defaultValues: { iss7: 0, hss7: 0, note: '' },
   });
 
-  const submitMutation = useMutation({
-    mutationFn: (payload: CreateUas7Payload) => uas7Api.createScore(payload),
-    onSuccess: () => {
-      Alert.alert('Thành công', 'Đã ghi nhận điểm UAS7 hôm nay');
-      queryClient.invalidateQueries({ queryKey: ['uas7-history'] });
-    },
-    onError: (err: any) => Alert.alert('Lỗi', err.message || 'Không thể gửi điểm')
-  });
-
-  const onSubmit = () => {
-    if (!eligibility?.medical_record_id) return;
-    submitMutation.mutate({
-      medical_record_id: eligibility.medical_record_id,
-      score_date: dayjs().format('YYYY-MM-DD'),
-      iss7,
-      hss7,
-      note,
-    });
-  };
-
-  if (checking) return (
-    <Screen header={<AppHeader title="Thang điểm UAS7" />}>
-      <Text className="p-4 text-center">Đang kiểm tra dữ liệu...</Text>
-    </Screen>
+  const sortedHistory = useMemo(
+    () => [...(history.data ?? [])].sort((a, b) => b.score_date.localeCompare(a.score_date)),
+    [history.data],
   );
+
+  const todayScore = useMemo(
+    () => sortedHistory.find((item) => item.score_date === todayKey),
+    [sortedHistory, todayKey],
+  );
+
+  const { chartBars, weeklyTotal } = useMemo(() => {
+    const byDate = new Map(sortedHistory.map((item) => [item.score_date, item]));
+    const today = startOfDay(new Date());
+    const bars: ScoreBar[] = [];
+    let total = 0;
+    for (let offset = -6; offset <= 0; offset++) {
+      const date = addDays(today, offset);
+      const key = toApiDate(date);
+      const found = byDate.get(key);
+      if (found) total += found.daily_score;
+      bars.push({
+        label: weekdayShort(date),
+        value: found ? found.daily_score : null,
+        highlight: offset === 0,
+      });
+    }
+    return { chartBars: bars, weeklyTotal: total };
+  }, [sortedHistory]);
+
+  const onBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
+
+  if (eligibility.isLoading) {
+    return (
+      <Screen header={<AppHeader title="Thang điểm UAS7" onBack={onBack} />} scroll={false}>
+        <Spinner />
+      </Screen>
+    );
+  }
+
+  if (eligibility.isError) {
+    return (
+      <Screen header={<AppHeader title="Thang điểm UAS7" onBack={onBack} />} scroll={false}>
+        <ErrorState
+          fill
+          onRetry={() => {
+            void eligibility.refetch();
+            void history.refetch();
+          }}
+        />
+      </Screen>
+    );
+  }
+
+  const onSubmit = form.handleSubmit((values: Uas7FormValues) => {
+    const recordId = eligibility.data?.medical_record_id;
+    if (!recordId) return;
+    submitMutation.mutate(
+      {
+        medical_record_id: recordId,
+        score_date: todayKey,
+        iss7: values.iss7,
+        hss7: values.hss7,
+        note: values.note?.trim() || undefined,
+      },
+      {
+        onSuccess: () => {
+          form.reset({ iss7: 0, hss7: 0, note: '' });
+        },
+      },
+    );
+  });
+
+  const weekBadge = weeklySeverity(weeklyTotal);
 
   return (
-    <Screen header={<AppHeader title="Thang điểm UAS7" />} scroll>
-      {eligibility?.eligible === 'true' ? (
-        <Card className="p-4 mb-4 mt-2">
-          <Text className="text-lg font-bold text-gray-800 mb-4">Chấm điểm UAS7 Hôm nay</Text>
-          
-          <Text className="mb-1 text-gray-600">Điểm mảng sẩn (ISS7 - từ 0 đến 3):</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-3 bg-white"
-            keyboardType="numeric"
-            value={iss7}
-            onChangeText={setIss7}
-          />
+    <Screen header={<AppHeader title="Thang điểm UAS7" onBack={onBack} />}>
+      <View className="gap-4">
+        {eligibility.data?.eligible ? (
+          todayScore ? (
+            <Card padding="lg" className="gap-2 border-success/30 bg-success-soft">
+              <View className="flex-row items-center justify-between gap-2">
+                <View className="flex-row items-center gap-2">
+                  <Icon as={CheckCircle2} size={20} color="success" />
+                  <Text variant="h3" tone="success">
+                    Đã chấm điểm hôm nay
+                  </Text>
+                </View>
+                <Badge label={`${todayScore.daily_score}/6 điểm`} tone={dailyTone(todayScore.daily_score)} />
+              </View>
+              <Text variant="caption" tone="success">
+                Ngứa (ISS7): {todayScore.iss7} · Sẩn phù (HSS7): {todayScore.hss7}
+              </Text>
+              {todayScore.note && (
+                <Text variant="caption" tone="muted">
+                  Ghi chú: {todayScore.note}
+                </Text>
+              )}
+            </Card>
+          ) : (
+            <Card padding="lg" className="gap-4">
+              <View className="gap-1">
+                <Text variant="h2">Chấm điểm hôm nay</Text>
+                <Text variant="caption" tone="muted">
+                  Ngày {formatDate(todayKey)} · Bệnh án #{eligibility.data.medical_record_id}
+                </Text>
+              </View>
 
-          <Text className="mb-1 text-gray-600">Điểm ngứa (HSS7 - từ 0 đến 3):</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-3 bg-white"
-            keyboardType="numeric"
-            value={hss7}
-            onChangeText={setHss7}
-          />
+              <FormField
+                control={form.control}
+                name="iss7"
+                render={(field) => (
+                  <ScoreScale
+                    label="Mức độ ngứa (ISS7)"
+                    required
+                    levels={ISS7_LEVELS}
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={field.error}
+                  />
+                )}
+              />
 
-          <Text className="mb-1 text-gray-600">Ghi chú:</Text>
-          <TextInput 
-            className="border border-gray-300 rounded p-2 mb-4 bg-white"
-            value={note}
-            onChangeText={setNote}
-          />
+              <FormField
+                control={form.control}
+                name="hss7"
+                render={(field) => (
+                  <ScoreScale
+                    label="Số lượng nốt sẩn phù (HSS7)"
+                    required
+                    levels={HSS7_LEVELS}
+                    value={field.value}
+                    onChange={field.onChange}
+                    error={field.error}
+                  />
+                )}
+              />
 
-          <Button 
-            onPress={onSubmit} 
-            disabled={submitMutation.isPending || !iss7 || !hss7}
-            title={submitMutation.isPending ? "Đang gửi..." : "Gửi kết quả"}
+              <FormField
+                control={form.control}
+                name="note"
+                render={(field) => (
+                  <TextField
+                    label="Ghi chú"
+                    placeholder="Triệu chứng nổi bật, yếu tố kích phát (nếu có)..."
+                    multiline
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    error={field.error}
+                  />
+                )}
+              />
+
+              <Button
+                title={submitMutation.isPending ? 'Đang gửi...' : 'Gửi kết quả hôm nay'}
+                fullWidth
+                loading={submitMutation.isPending}
+                onPress={() => void onSubmit()}
+              />
+            </Card>
+          )
+        ) : (
+          <Card padding="lg" className="border-warning/40 bg-warning-soft">
+            <Text weight="semibold" tone="warning">
+              Chưa đủ điều kiện chấm điểm UAS7
+            </Text>
+            <Text variant="caption" tone="muted" className="mt-1">
+              Bạn cần có bệnh án mề đay mạn tính đang chờ tiếp nhận hoặc đang điều trị để ghi nhận điểm hằng ngày.
+            </Text>
+          </Card>
+        )}
+
+        <StatCard
+          label="Tổng điểm UAS7 (7 ngày gần nhất)"
+          value={weeklyTotal}
+          unit="/ 42"
+          icon={Activity}
+          tone="teal"
+          footer={<Badge label={weekBadge.label} tone={weekBadge.tone} />}
+        />
+
+        <Card padding="lg" className="gap-3">
+          <SectionHeader title="Biểu đồ 7 ngày gần nhất" />
+          <ScoreBarChart
+            data={chartBars}
+            max={6}
+            colorFor={(value) => getSeverityColor(value, 6)}
           />
         </Card>
-      ) : (
-        <Card className="p-4 bg-yellow-50 border-yellow-200 mt-2">
-          <Text className="text-yellow-700">Bạn hiện không có bệnh án nào đang được điều trị để chấm điểm.</Text>
+
+        <Card padding="lg" className="gap-3">
+          <SectionHeader title="Lịch sử chấm điểm" />
+          {history.isLoading ? (
+            <Spinner />
+          ) : history.isError ? (
+            <ErrorState onRetry={() => void history.refetch()} />
+          ) : sortedHistory.length === 0 ? (
+            <EmptyState
+              icon={Activity}
+              title="Chưa có dữ liệu UAS7"
+              description="Các lần chấm điểm hằng ngày sẽ được lưu và hiển thị tại đây."
+            />
+          ) : (
+            <View className="gap-3">
+              {sortedHistory.map((item, idx) => (
+                <View key={item.id}>
+                  {idx > 0 && <Divider className="mb-3" />}
+                  <View className="flex-row items-center justify-between gap-2">
+                    <View className="flex-1 gap-0.5">
+                      <Text weight="semibold">{formatDate(item.score_date)}</Text>
+                      <Text variant="caption" tone="muted">
+                        Ngứa (ISS7): {item.iss7} · Sẩn phù (HSS7): {item.hss7}
+                      </Text>
+                      {item.note && (
+                        <Text variant="caption" tone="muted">
+                          {item.note}
+                        </Text>
+                      )}
+                    </View>
+                    <Badge label={`${item.daily_score}/6`} tone={dailyTone(item.daily_score)} />
+                  </View>
+                </View>
+              ))}
+            </View>
+          )}
         </Card>
-      )}
+      </View>
     </Screen>
   );
-};
+}

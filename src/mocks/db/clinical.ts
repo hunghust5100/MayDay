@@ -1,5 +1,6 @@
 import type { ClinicalTemplate, FormQuestion, AnswerInput } from '@/shared/types/clinical-form';
 import type { MedicalRecordStatus } from '@/shared/types';
+import { addDays, startOfDay, toApiDate } from '@/shared/utils';
 export type MedicalRecordRow = {
   medical_record_id: number;
   patient_id: number;
@@ -16,6 +17,50 @@ export type AnswerRow = AnswerInput & {
   id: number;
   medical_record_id: number;
   answered_by: number;
+  created_at: string;
+  updated_at: string;
+};
+export type Uas7ScoreRow = {
+  id: number;
+  patient_id: number;
+  medical_record_id: number;
+  score_date: string;
+  iss7: number;
+  hss7: number;
+  daily_score: number;
+  note: string | null;
+  created_at: string;
+  updated_at: string;
+};
+export type PrescriptionItemRow = {
+  id: number;
+  medicine_name: string;
+  dosage: string | null;
+  frequency: string | null;
+  duration: string | null;
+  instruction: string | null;
+};
+export type PrescriptionRow = {
+  id: number;
+  medical_record_id: number;
+  doctor_id: number;
+  doctor_name: string;
+  note: string | null;
+  items: PrescriptionItemRow[];
+  created_at: string;
+  updated_at: string;
+};
+export type LabResultRow = {
+  id: number;
+  lab_request_id: number;
+  medical_record_id: number;
+  doctor_id: number;
+  test_name: string;
+  description: string | null;
+  note: string | null;
+  result_value: string | null;
+  reference_range: string | null;
+  status: 'pending' | 'completed';
   created_at: string;
   updated_at: string;
 };
@@ -126,5 +171,120 @@ export function createClinicalSeed() {
       updated_at: stamp,
     });
   }
-  return { medical_records, answers, templates, classificationQuestions };
+  const uas7_scores = new Map<number, Uas7ScoreRow>();
+  const today = startOfDay(new Date());
+  const sampleScores: [number, number, string | null][] = [
+    [2, 2, 'Ngứa nhiều vào buổi tối'],
+    [2, 1, null],
+    [1, 1, 'Giảm sau khi uống thuốc'],
+    [2, 2, null],
+    [1, 2, 'Nổi sẩn vùng cánh tay'],
+    [1, 1, null],
+  ];
+  sampleScores.forEach(([iss7, hss7, note], idx) => {
+    const id = idx + 1;
+    const scoreDate = toApiDate(addDays(today, idx - 6));
+    const stamp = `${scoreDate} 20:00:00`;
+    uas7_scores.set(id, {
+      id,
+      patient_id: 15,
+      medical_record_id: 5,
+      score_date: scoreDate,
+      iss7,
+      hss7,
+      daily_score: iss7 + hss7,
+      note,
+      created_at: stamp,
+      updated_at: stamp,
+    });
+  });
+
+  const prescriptions = new Map<number, PrescriptionRow>([
+    [
+      1,
+      {
+        id: 1,
+        medical_record_id: 3,
+        doctor_id: 3,
+        doctor_name: 'Lê Văn Cường',
+        note: 'Uống đều đặn, tránh thức ăn nghi ngờ gây dị ứng.',
+        items: [
+          {
+            id: 1,
+            medicine_name: 'Loratadine 10mg',
+            dosage: '10mg',
+            frequency: '1 viên/ngày',
+            duration: '14 ngày',
+            instruction: 'Uống sau bữa ăn sáng',
+          },
+          {
+            id: 2,
+            medicine_name: 'Fexofenadine 180mg',
+            dosage: '180mg',
+            frequency: '1 viên/tối khi ngứa nhiều',
+            duration: '7 ngày',
+            instruction: 'Uống với nước lọc, tránh nước ép hoa quả',
+          },
+        ],
+        created_at: '2026-10-04 10:30:00',
+        updated_at: '2026-10-04 10:30:00',
+      },
+    ],
+  ]);
+
+  const lab_results = new Map<number, LabResultRow>([
+    [
+      1,
+      {
+        id: 1,
+        lab_request_id: 1,
+        medical_record_id: 3,
+        doctor_id: 3,
+        test_name: 'Định lượng IgE toàn phần',
+        description: 'Đánh giá cơ địa dị ứng',
+        note: null,
+        result_value: '185 IU/mL',
+        reference_range: '< 100 IU/mL',
+        status: 'completed',
+        created_at: '2026-10-04 09:30:00',
+        updated_at: '2026-10-04 14:00:00',
+      },
+    ],
+    [
+      2,
+      {
+        id: 2,
+        lab_request_id: 1,
+        medical_record_id: 3,
+        doctor_id: 3,
+        test_name: 'Công thức máu toàn bộ',
+        description: 'Kiểm tra bạch cầu ái toan',
+        note: null,
+        result_value: 'Bạch cầu ái toan 4.2%',
+        reference_range: '1% – 6%',
+        status: 'completed',
+        created_at: '2026-10-04 09:30:00',
+        updated_at: '2026-10-04 14:00:00',
+      },
+    ],
+    [
+      3,
+      {
+        id: 3,
+        lab_request_id: 2,
+        medical_record_id: 5,
+        doctor_id: 2,
+        test_name: 'Test lẩy da dị nguyên (Prick test)',
+        description: 'Sàng lọc dị nguyên hô hấp và thực phẩm',
+        note: 'Ngưng kháng histamin trước test 5 ngày',
+        result_value: null,
+        reference_range: null,
+        status: 'pending',
+        created_at: '2026-10-06 09:30:00',
+        updated_at: '2026-10-06 09:30:00',
+      },
+    ],
+  ]);
+
+  return { medical_records, answers, templates, classificationQuestions, uas7_scores, prescriptions, lab_results };
 }
