@@ -2,6 +2,9 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { View } from 'react-native';
 import { canEditClinicalRecord, getRoleGroup, ROLE_IDS, useSession } from '@/core/auth';
+import { getErrorMessage } from '@/core/api';
+import { QuestionImageField, useRecordImages } from '@/features/media';
+import type { ImageSelections } from '@/shared/types/clinical-form';
 import {
   ClinicalForm,
   serializeAnswers,
@@ -30,6 +33,7 @@ import { formatDateTime } from '@/shared/utils';
 import { useRecord, useRecordMutations } from '../hooks/useRecords';
 import { recordUpdateSchema } from '../schemas';
 import type { MedicalRecord, RecordAnswer, RecordSummary } from '../types';
+import { saveRecordImages, visibleRecordImages } from '../api/record-media';
 
 function toValues(answers: RecordAnswer[], template: ClinicalTemplate): FormValues {
   const values: FormValues = {};
@@ -64,6 +68,10 @@ function DetailForm({
   const [instructions, setInstructions] = useState(record.instructions ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<'completed' | 'cancelled' | 'delete' | null>(null);
+  const linkedImages = useRecordImages(answers);
+  const [imageDraft, setImageDraft] = useState<ImageSelections>({});
+  const [savingImages, setSavingImages] = useState(false);
+  const images = { ...linkedImages.images, ...imageDraft };
   if (!user) return null;
   const patient = user.role_id === ROLE_IDS.PATIENT;
   const doctor = canEditClinicalRecord(user.role_id);
@@ -73,13 +81,32 @@ function DetailForm({
     : assigned && record.status === 'in_progress';
   const actor = editable ? (patient ? 'patient' : 'doctor') : 'readonly';
   const busy =
-    mutations.save.isPending || mutations.update.isPending || mutations.remove.isPending || mutations.accept.isPending;
+    mutations.save.isPending ||
+    mutations.update.isPending ||
+    mutations.remove.isPending ||
+    mutations.accept.isPending ||
+    savingImages ||
+    linkedImages.isLoading ||
+    linkedImages.isError;
   const saveAnswers = async () => {
-    const validation = validateForm(template, values, actor);
+    const desired = visibleRecordImages(template, values, images);
+    const validation = validateForm(template, values, actor, { images: desired });
     setErrors(validation);
     if (Object.keys(validation).length) return false;
-    const body = serializeAnswers(template, values, actor);
+    const body = serializeAnswers(template, values, actor, desired);
     if (body.length) await mutations.save.mutateAsync(body);
+    setSavingImages(true);
+    try {
+      await saveRecordImages(record.medical_record_id, template, values, images, actor, linkedImages.images);
+      setImageDraft({});
+    } catch (error) {
+      toast.error(
+        `Câu trả lời đã lưu nhưng ảnh chưa hoàn tất: ${getErrorMessage(error)}. Bấm lưu để thử lại.`,
+      );
+      throw error;
+    } finally {
+      setSavingImages(false);
+    }
     return true;
   };
   const finish = async () => {
@@ -127,7 +154,58 @@ function DetailForm({
           )}
         </Card>
         <Text variant="h3">{template.name}</Text>
-        <ClinicalForm template={template} values={values} onChange={setValues} actor={actor} errors={errors} />
+        {linkedImages.isLoading && <Text tone="muted">Đang tải ảnh đính kèm…</Text>}
+        {linkedImages.isError && (
+          <ErrorState title="Chưa tải được ảnh đính kèm" onRetry={() => linkedImages.refetch()} />
+        )}
+        <ClinicalForm
+          template={template}
+          values={values}
+          onChange={(next) => {
+            if (!busy) setValues(next);
+          }}
+          actor={actor}
+          errors={errors}
+          renderAttachments={(question, canEdit) => (
+            <QuestionImageField
+              question={question}
+              answer={values[question.question_id]}
+              images={images[question.question_id] ?? []}
+              editable={canEdit && !busy}
+              context={{
+                medical_record_id: record.medical_record_id,
+                question_id: question.question_id,
+                category: 'answer',
+              }}
+              onChange={(next) => setImageDraft((current) => ({ ...current, [question.question_id]: next }))}
+            />
+          )}
+        />
+        {patient && (
+          <Button
+            title="Theo dõi tổn thương của bệnh án"
+            variant="soft"
+            onPress={() =>
+              router.push({ pathname: '/patient/lesions', params: { recordId: record.medical_record_id } })
+            }
+          />
+        )}
+        {getRoleGroup(user.role_id) !== 'admin' && (
+          <Button
+            title="Xem kho ảnh bệnh nhân"
+            variant="ghost"
+            onPress={() =>
+              router.push({
+                pathname: patient ? '/patient/media' : '/doctor/media',
+                params: {
+                  userId: record.patient_id,
+                  recordId: record.medical_record_id,
+                  recordStatus: record.status,
+                },
+              })
+            }
+          />
+        )}
         {assigned && record.status === 'in_progress' ? (
           <TextField label="Chỉ dẫn của bác sĩ" multiline value={instructions} onChange={setInstructions} />
         ) : (
@@ -161,7 +239,12 @@ function DetailForm({
         {assigned && record.status === 'in_progress' && (
           <>
             <Button title="Chốt bệnh án" disabled={busy} onPress={() => setConfirm('completed')} />
-            <Button title="Hủy bệnh án" variant="danger" disabled={busy} onPress={() => setConfirm('cancelled')} />
+            <Button
+              title="Hủy bệnh án"
+              variant="danger"
+              disabled={busy}
+              onPress={() => setConfirm('cancelled')}
+            />
           </>
         )}
         {getRoleGroup(user.role_id) === 'admin' && (
@@ -170,7 +253,9 @@ function DetailForm({
       </View>
       <ConfirmDialog
         visible={confirm !== null}
-        title={confirm === 'delete' ? 'Xóa bệnh án?' : confirm === 'cancelled' ? 'Hủy bệnh án?' : 'Chốt bệnh án?'}
+        title={
+          confirm === 'delete' ? 'Xóa bệnh án?' : confirm === 'cancelled' ? 'Hủy bệnh án?' : 'Chốt bệnh án?'
+        }
         description={
           confirm === 'delete'
             ? 'Bệnh án và các câu trả lời sẽ bị xóa. Tệp ảnh gốc được giữ lại.'

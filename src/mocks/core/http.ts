@@ -8,7 +8,7 @@ export type MockRequest = {
   params: Record<string, string>;
   /** Header, tên viết thường. */
   headers: Record<string, string>;
-  /** Body JSON đã parse (`undefined` nếu không gửi body). */
+  /** Body JSON đã parse hoặc FormData cho upload (`undefined` nếu không gửi body). */
   body: unknown;
 };
 
@@ -42,6 +42,7 @@ const MESSAGES: Record<string, string> = {
   '3105': 'Doctor not assigned to this record',
   '3106': "Cannot access another user's data",
   '4001': 'Medical record not found',
+  '4002': 'Active medical record required',
   '4003': 'Medical record already completed',
   '4004': 'Medical record not in pending status',
   '4005': 'Already accepted by another doctor',
@@ -54,6 +55,20 @@ const MESSAGES: Record<string, string> = {
   '4103': 'Section not found',
   '4104': 'Question not found',
   '4105': 'Template in use cannot be deleted',
+  '6001': 'Image file is required',
+  '6002': 'Unsupported image format',
+  '6003': 'File size exceeds limit',
+  '6004': 'Too many files',
+  '6005': 'Attachment not found',
+  '6006': 'Image already mapped to answer',
+  '6007': 'Image storage failed',
+  '7001': 'Lesion episode not found',
+  '7002': 'Lesion location not found',
+  '7003': 'Lesion photo not found',
+  '7004': 'Lesion name cannot be empty',
+  '7005': 'Body part cannot be empty',
+  '7006': 'Invalid milestone value',
+  '7007': 'Symptom score out of range',
   '9101': 'FCM token is required',
   '9102': 'Notification not found',
   '9901': 'Internal server error',
@@ -69,6 +84,10 @@ function httpStatusOf(code: string): number {
   if (code === '3006') return 409;
   if (code === '3007') return 404;
   if (code.startsWith('31')) return 403;
+  if (['6005', '7001', '7002', '7003'].includes(code)) return 404;
+  if (code === '6006') return 409;
+  if (code === '6007') return 500;
+  if (code.startsWith('6') || code.startsWith('7')) return 400;
   if (code === '4001' || code === '4101') return 404;
   if (code === '4003' || code === '4004' || code === '4005') return 409;
   if (code.startsWith('4')) return 400;

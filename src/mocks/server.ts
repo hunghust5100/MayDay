@@ -9,6 +9,8 @@ import { rbacRoutes } from './handlers/rbac';
 import { medicalRoutes } from './handlers/medical-records';
 import { notificationRoutes } from './handlers/notifications';
 import { templateRoutes } from './handlers/templates';
+import { mediaRoutes } from './handlers/media';
+import { lesionRoutes } from './handlers/lesions';
 
 const router = createRouter([
   ...authRoutes,
@@ -19,6 +21,8 @@ const router = createRouter([
   ...templateRoutes,
   ...medicalRoutes,
   ...clinicalCareRoutes,
+  ...mediaRoutes,
+  ...lesionRoutes,
 ]);
 
 /** Xử lý một request giả: tìm route → chạy handler → chuyển lỗi nghiệp vụ thành Base Response. */

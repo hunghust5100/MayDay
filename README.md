@@ -217,8 +217,11 @@ app ──▶ features ──▶ core ──▶ shared
 | | `/patient/account` | Tài khoản | ✅ |
 | Bệnh nhân — màn con | `/patient/profile`, `/patient/profile/edit` | Hồ sơ cá nhân, Sửa hồ sơ | ✅ |
 | | `/patient/records/new` | Phân loại, điền phiếu, khai báo bệnh án | ✅ |
-| | `/patient/uas7`, `/patient/lesions` | Chấm điểm UAS7, Theo dõi tổn thương | 🚧 |
-| | `/patient/prescriptions`, `/patient/labs`, `/patient/media` | Đơn thuốc, Xét nghiệm, Kho ảnh | 🚧 |
+| | `/patient/uas7` | Chấm điểm UAS7 | ✅ |
+| | `/patient/lesions`, `/patient/lesions/[episodeId]` | Đợt tổn thương và vị trí theo từng bệnh án | ✅ |
+| | `/patient/lesions/[episodeId]/locations/[locationId]` | Ảnh tiến triển, so sánh ba mốc, điểm ngứa/đau/rát | ✅ |
+| | `/patient/prescriptions`, `/patient/labs` | Đơn thuốc, Xét nghiệm | ✅ |
+| | `/patient/media` | Kho ảnh, tải lên, xem, tìm và xóa ảnh gốc | ✅ |
 | Nhân viên y tế — tab | `/doctor` | Tổng quan (lối tắt chức năng) | ✅ |
 | | `/doctor/records`, `/doctor/patients` | Bệnh án, tìm/lọc bệnh nhân | ✅ |
 | | `/doctor/notifications` | Hộp thư riêng, điều hướng theo vai trò | ✅ |
@@ -226,7 +229,8 @@ app ──▶ features ──▶ core ──▶ shared
 | Nhân viên y tế — màn con | `/doctor/patients/new` | Thêm bệnh nhân và thông tin hồ sơ | ✅ |
 | | `/doctor/patients/[id]`, `/doctor/records/new` | Lịch sử bệnh nhân, tạo bệnh án | ✅ |
 | | `/patient/records/[id]`, `/doctor/records/[id]` | Chi tiết, câu trả lời, tiếp nhận và chốt theo vai trò | ✅ |
-| | `/doctor/prescriptions`, `/doctor/labs`, `/doctor/media` | Kê đơn, Xét nghiệm, Kho ảnh | 🚧 |
+| | `/doctor/prescriptions`, `/doctor/labs` | Kê đơn, Xét nghiệm | ✅ |
+| | `/doctor/media` | Kho ảnh của mình; xem kho bệnh nhân từ bệnh án | ✅ |
 | Admin — tab | `/admin` | Tổng quan (số liệu tài khoản, lối tắt) | ✅ |
 | | `/admin/users` | Người dùng: tìm kiếm, lọc, phân trang | ✅ |
 | | `/admin/rbac` | Phân quyền: vai trò (dạng cây), quyền hạn | ✅ |
@@ -261,6 +265,8 @@ Backend giả chạy **ngay trong app** (`src/mocks/`), làm theo đặc tả gi
 | Quản lý bệnh nhân và bệnh án | docpat01–02, medrec01–08/10/11/13/14 (các API trong đặc tả) |
 | Phiếu khám động | 11 endpoint: CRUD mẫu, phần, câu hỏi/options; giữ tmpl03 đọc cây mẫu cho bệnh án |
 | Thông báo | 5 endpoint: danh sách, đọc một/tất cả, xóa, đăng ký token ở mức REST mock |
+| Kho ảnh và liên kết câu trả lời | img01/03/05, ansimg01/03/04 (6 endpoint) |
+| Theo dõi tổn thương | lesion01/02/03/04/06, loc01/03/04/05, lphoto01–04 (13 endpoint) |
 
 Endpoint chưa mock trả `9901` và in cảnh báo `[mock] Chưa có mock cho …`.
 
@@ -281,3 +287,32 @@ Xem [hướng dẫn chạy thử, hợp đồng và các điểm cần đối ch
 ## 9. Thông báo và bộ tạo mẫu phiếu khám động
 
 Đã hoàn thiện frontend và mock trong bộ nhớ; **chưa có backend thật**. Báo cáo tích hợp, phạm vi thay đổi và đề xuất toast dùng chung: [docs/notifications-dynamic-form-integration.md](docs/notifications-dynamic-form-integration.md).
+
+## 10. Kho ảnh/tệp đính kèm và theo dõi tổn thương da
+
+Triển khai theo SLIDE8, SLIDE9; tham khảo luồng và mô hình trong `aistudio`, giữ kiến trúc feature và UI hiện có. Không thêm backend hoặc dependency.
+
+- **Kho ảnh:** chọn ảnh camera/thư viện, tải từng tệp bằng multipart field `file`, xem toàn màn hình, tìm theo metadata, xóa có xác nhận, trạng thái từng ảnh và thử lại riêng ảnh lỗi. Nhận JPG/PNG/WEBP, tối đa 5 MB/ảnh và 10 ảnh/lượt chọn theo ràng buộc ảnh sẵn có. Chưa mở rộng sang video/audio/tài liệu vì chưa có hợp đồng upload/validation tương ứng.
+- **Phiếu khám:** chọn ảnh đã có hoặc tải mới cho câu hỏi `image_upload`, câu hỏi `allow_image`, hoặc từng lựa chọn `trigger_image_upload`. Bệnh án được lưu để có answer ID trước, rồi liên kết bằng ansimg01. Nếu liên kết lỗi, giữ ID bệnh án đã tạo và cho tiếp tục, không POST thêm bệnh án khi thử lại trong màn hiện tại. Gỡ liên kết bằng ansimg04 luôn giữ ảnh gốc.
+- **Theo dõi:** chọn bệnh án → CRUD đợt tổn thương → CRUD vị trí cơ thể → ảnh khởi phát/đỉnh điểm/trở lại bình thường. Ghi ngày giờ, bối cảnh, thuốc đã dùng, điểm ngứa/đau/rát (0–10) và số nốt sẩn nếu đã đếm. So sánh ảnh mới nhất của từng mốc và xem lịch sử đầy đủ. Bản ghi ảnh tiến triển dùng lại media gốc, không upload thêm nếu chọn từ kho.
+- **AUAS/AI:** chỉ hiển thị `local_auas` và ảnh chú thích nếu API đã trả về; không tự sinh số liệu hay triển khai AI. Vị trí lưu theo `body_part`; không sao chép tọa độ/body-map giả của aistudio khi API chưa có trường lưu chúng.
+- **Quyền/trạng thái:** bệnh nhân ghi nhận trên bệnh án của mình đang pending/in_progress; ảnh câu trả lời tuân theo quyền điền section và chỉ được bệnh nhân sửa khi pending, bác sĩ phụ trách khi in_progress. completed/cancelled chỉ đọc. Staff xem ảnh bệnh án qua liên kết; ảnh tải lên thuộc người thực hiện upload.
+- **Xóa:** mock xóa dây chuyền mapping/ảnh tiến triển khi xóa media còn được phép sửa; chặn xóa ảnh đang bảo vệ dữ liệu bệnh án đóng hoặc câu trả lời chỉ đọc. Xóa đợt/vị trí/bản ghi ảnh không xóa media gốc. Admin xóa bệnh án sẽ dọn liên kết và theo dõi con, đồng thời giữ tệp gốc với medical_record_id=null.
+- **Mock multipart:** web giữ nội dung ảnh bằng data URL; native giữ URI ảnh đã chọn trong app. Chỉ có dữ liệu trong bộ nhớ, không phải server lưu trữ; reload reset seed. Seed có một đợt/vị trí cho bệnh nhân 0912345678 tại bệnh án #1, kho ảnh ban đầu rỗng. Không dùng ảnh y tế thật hoặc URL ảnh ngẫu nhiên làm dữ liệu giả.
+
+**Hợp đồng cần chú ý:** ID media/đợt/vị trí/ảnh tiến triển là chuỗi; ID bệnh án/người dùng được chuẩn hóa về số trong app. `context_tags` gửi dạng chuỗi JSON; các ID/điểm số của theo dõi gửi theo kiểu chuỗi ở bảng slide. Bảng lphoto03 cho phép cập nhật mốc và điểm số, giữ nguyên attachment/vị trí/thời điểm chụp.
+
+**Điểm thiếu trong đặc tả:** SLIDE9 trang 43 chép nhầm mô tả/endpoint loc03, trong khi trang 42 ghi rõ lấy ảnh theo location_id. Adapter hiện dùng `GET /lesion-photos/location/:location_id`; cần xác nhận đường dẫn này với backend. Luồng UI luôn gắn ảnh tiến triển với một vị trí để có thể lấy lại ảnh bằng API này, dù input lphoto01 cho phép location_id trống. API ảnh là nguồn chính, không dùng endpoint riêng hoặc ID cố định từ aistudio.
+
+**Kiểm tra trước review (21/11/2026):**
+
+- `npm run typecheck`: qua. `npm run lint`: không có lỗi; còn hai cảnh báo import trùng đã có sẵn trong ProfileEditScreen.
+- `npm run test:modules`: 23 nhóm tình huống qua, gồm 16 nhóm hồi quy và 7 nhóm mới trong `scripts/checks/media-lesions.cjs`. Kiểm tra cả adapter thật của feature qua mock transport: 19 endpoint, multipart web/native, quyền và sở hữu, kiểu ID/payload, giới hạn tệp/điểm số, khóa bệnh án, xóa dây chuyền, ảnh bắt buộc/section, lỗi giữa chừng và thử lại không tạo liên kết trùng. Lưu câu trả lời không đổi ảnh không phát sinh request media.
+- Đã chạy UI web ở 390×844 và 1280×900: form và lỗi bắt buộc, tạo đợt → vị trí → chọn/tải ảnh PNG giả lập → ghi nhận ảnh với điểm 0/5, hiển thị mốc/lịch sử, kho ảnh, tìm kiếm không có kết quả, xem toàn màn hình và xác nhận/xóa tệp gốc thành công. Chỉ dùng ảnh hình học tự tạo, không dùng dữ liệu y tế thật.
+- `npx expo export --platform all`: qua cho web, Android và iOS (đã chạy thêm export riêng web/Android). Đây là export bundle, **không phải APK hoặc kiểm thử trên thiết bị Android**; máy hiện không có adb/thiết bị để xác minh camera, quyền hệ điều hành và lưu URI native thực tế.
+- `npx expo-doctor`: 19/20 mục qua; báo expo 58.0.25 cần bản vá ~58.0.26 và expo-router 58.0.31 cần ~58.0.32. Đây là version nền đã có trong repo trước thay đổi; chưa nâng dependency chung trong nhánh module.
+- Chưa có backend thật: cần đối chiếu đường dẫn lphoto02 nêu trên, phản hồi multipart/URL lưu trữ, cấu hình quyền thật và hành vi đồng thời trên server trước khi nghiệm thu tích hợp.
+
+**Điểm tối ưu:** kho ảnh dùng FlatList để giới hạn số ô render, giới hạn chiều rộng trên web lớn, upload có thể thu gọn, chạm ảnh mở ngay thông tin/xem/xóa; lỗi điểm số dùng tiếng Việt. Đọc trạng thái bệnh án cho màn tổn thương không tải thêm toàn bộ câu trả lời/tóm tắt. Bộ chọn bệnh án tải thêm theo trang và ưu tiên bệnh án còn hoạt động ở màn theo dõi. Thông tin batch upload được chụp lúc bắt đầu; giữ các ảnh tải thành công khi thử lại. Media không import ngược feature bệnh án để tránh vòng phụ thuộc runtime.
+
+**Cách thử nhanh:** đăng nhập bệnh nhân `0912345678` / `123456`, vào Ghi nhận tổn thương, chọn bệnh án đang chờ/đang khám, tạo đợt và vị trí rồi thêm ảnh. Tải ảnh lên và bấm Xong để quay lại form, nhập điểm và Ghi nhận ảnh tiến triển. Vào Kho ảnh để tìm, xem hoặc quản lý tệp gốc. Dùng nút quay lại trong app để giữ dữ liệu mock; tải lại trang sẽ reset seed. Quyền upload mock dựa trên grant `upload_images`; UI dùng quy ước vai trò seed và backend vẫn quyết định quyền cuối cùng.

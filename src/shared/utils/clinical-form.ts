@@ -7,6 +7,7 @@ import type {
   FormQuestion,
   FormValue,
   FormValues,
+  ImageSelections,
 } from '@/shared/types/clinical-form';
 
 export const SUPPORTED_QUESTION_TYPES = ['text', 'number', 'date', 'radio', 'checkbox'] as const;
@@ -137,15 +138,24 @@ export function questionVisible(
   return true;
 }
 
-export function validateForm(template: ClinicalTemplate, values: FormValues, actor: FormActor): Record<string, string> {
+export function validateForm(
+  template: ClinicalTemplate,
+  values: FormValues,
+  actor: FormActor,
+  options: { images?: ImageSelections; deferImageRequirements?: boolean } = {},
+): Record<string, string> {
   const errors: Record<string, string> = {};
   const questions = template.sections.flatMap((s) => s.questions);
   for (const section of template.sections)
     for (const q of section.questions) {
       if (!canFill(section.filled_by, actor) || !questionVisible(q, values, questions)) continue;
       const value = values[q.question_id];
+      const attached = options.images?.[q.question_id] ?? [];
+      if (new Set(attached.map((a) => a.attachment_id)).size !== attached.length)
+        errors[q.question_id] = 'Mỗi ảnh chỉ được gắn một lần vào cùng câu trả lời';
       if (
         isRequired(q.is_required) &&
+        !(q.type_question === 'image_upload' && options.images !== undefined) &&
         (value == null ||
           value === '' ||
           (typeof value === 'string' && !value.trim()) ||
@@ -165,24 +175,58 @@ export function validateForm(template: ClinicalTemplate, values: FormValues, act
         const selected = Array.isArray(value) ? value : [value];
         if (selected.some((v) => !q.options?.some((o) => o.option_value === v)))
           errors[q.question_id] = 'Lựa chọn không hợp lệ';
-        if (selected.some((v) => q.options?.some((o) => o.option_value === v && isRequired(o.trigger_image_upload))))
-          errors[q.question_id] = 'Lựa chọn này cần ảnh; chức năng ảnh chưa được tích hợp';
+        if (
+          !options.deferImageRequirements &&
+          selected.some(
+            (v) =>
+              q.options?.some((o) => o.option_value === v && isRequired(o.trigger_image_upload)) &&
+              !options.images?.[q.question_id]?.some((image) => image.option_value === v),
+          )
+        )
+          errors[q.question_id] =
+            options.images === undefined
+              ? 'Lựa chọn này cần ảnh; chức năng ảnh chưa được tích hợp'
+              : 'Vui lòng đính kèm ảnh cho từng lựa chọn yêu cầu ảnh';
       }
-      if (!isSupportedQuestionType(q.type_question) && isRequired(q.is_required))
+      if (
+        q.type_question === 'image_upload' &&
+        options.images !== undefined &&
+        isRequired(q.is_required) &&
+        !options.deferImageRequirements &&
+        !options.images[q.question_id]?.length
+      )
+        errors[q.question_id] = 'Vui lòng chọn hoặc tải lên ít nhất một ảnh';
+      if (
+        !isSupportedQuestionType(q.type_question) &&
+        !(q.type_question === 'image_upload' && options.images !== undefined) &&
+        isRequired(q.is_required)
+      )
         errors[q.question_id] = 'Loại câu hỏi bắt buộc này chưa được hỗ trợ';
     }
   return errors;
 }
 
-export function serializeAnswers(template: ClinicalTemplate, values: FormValues, actor: FormActor): AnswerInput[] {
+export function serializeAnswers(
+  template: ClinicalTemplate,
+  values: FormValues,
+  actor: FormActor,
+  images?: ImageSelections,
+): AnswerInput[] {
   const questions = template.sections.flatMap((s) => s.questions);
   return template.sections.flatMap((section) =>
     canFill(section.filled_by, actor)
       ? section.questions.flatMap((q): AnswerInput[] => {
           const value = values[q.question_id];
+          // Image mappings need the answer row ID, obtained after saving this placeholder.
+          if (q.type_question === 'image_upload' && images !== undefined)
+            return [
+              { question_id: q.question_id, answer_text: null, answer_value: null, question_option_id: null },
+            ];
           if (!isSupportedQuestionType(q.type_question)) return [];
           if (!questionVisible(q, values, questions) || value == null || value === '')
-            return [{ question_id: q.question_id, question_option_id: null, answer_text: null, answer_value: null }];
+            return [
+              { question_id: q.question_id, question_option_id: null, answer_text: null, answer_value: null },
+            ];
           if (q.type_question === 'radio')
             return [
               {
@@ -194,9 +238,21 @@ export function serializeAnswers(template: ClinicalTemplate, values: FormValues,
             ];
           if (q.type_question === 'text' || q.type_question === 'date')
             return [
-              { question_id: q.question_id, question_option_id: null, answer_text: String(value), answer_value: null },
+              {
+                question_id: q.question_id,
+                question_option_id: null,
+                answer_text: String(value),
+                answer_value: null,
+              },
             ];
-          return [{ question_id: q.question_id, question_option_id: null, answer_text: null, answer_value: { value } }];
+          return [
+            {
+              question_id: q.question_id,
+              question_option_id: null,
+              answer_text: null,
+              answer_value: { value },
+            },
+          ];
         })
       : [],
   );

@@ -5,10 +5,10 @@ import { View } from 'react-native';
 import { ROLE_IDS, useSession } from '@/core/auth';
 import { MEDICAL_RECORD_STATUS } from '@/shared/constants';
 import { SelectField, type SelectOption } from '@/shared/form';
-import { EmptyState, ErrorState, Spinner } from '@/shared/ui';
+import { Button, EmptyState, ErrorState, Spinner } from '@/shared/ui';
 import { formatDateTime } from '@/shared/utils';
 
-import { useRecord, useRecords } from '../hooks/useRecords';
+import { useRecordDetail, useRecords } from '../hooks/useRecords';
 import type { MedicalRecord } from '../types';
 
 export type RecordSelectorProps = {
@@ -17,6 +17,7 @@ export type RecordSelectorProps = {
   /** ID bệnh án truyền từ route params (nếu có). */
   initialRecordId?: number | null;
   label?: string;
+  preferActive?: boolean;
 };
 
 /**
@@ -28,6 +29,7 @@ export function RecordSelector({
   onChange,
   initialRecordId,
   label = 'Hồ sơ bệnh án',
+  preferActive = false,
 }: RecordSelectorProps) {
   const auth = useSession();
   const user = auth.status === 'signedIn' ? auth.user : null;
@@ -35,7 +37,7 @@ export function RecordSelector({
 
   const query = useRecords({}, patientId);
   const selectedFromList = query.items.find((r) => r.medical_record_id === value);
-  const fallbackDetail = useRecord(value && !selectedFromList ? value : 0).detail;
+  const fallbackDetail = useRecordDetail(value && !selectedFromList ? value : 0);
 
   const records = useMemo(() => {
     const list = [...query.items];
@@ -54,11 +56,13 @@ export function RecordSelector({
     if (query.items.length > 0) {
       const preferred =
         patientId === undefined
-          ? query.items.find((r) => r.status === 'in_progress') ?? query.items[0]
-          : query.items[0];
+          ? (query.items.find((r) => r.status === 'in_progress') ?? query.items[0])
+          : ((preferActive
+              ? query.items.find((r) => r.status === 'pending' || r.status === 'in_progress')
+              : undefined) ?? query.items[0]);
       onChange(preferred.medical_record_id);
     }
-  }, [value, initialRecordId, query.items, patientId, onChange]);
+  }, [value, initialRecordId, query.items, patientId, onChange, preferActive]);
 
   const options = useMemo<SelectOption<number>[]>(
     () =>
@@ -97,13 +101,28 @@ export function RecordSelector({
   }
 
   return (
-    <SelectField
-      label={label}
-      placeholder="Chọn bệnh án"
-      leftIcon={FileText}
-      options={options}
-      value={value}
-      onChange={onChange}
-    />
+    <View className="gap-2">
+      <SelectField
+        label={label}
+        placeholder="Chọn bệnh án"
+        leftIcon={FileText}
+        options={options}
+        value={value}
+        onChange={onChange}
+      />
+      {query.hasNextPage && (
+        <Button
+          title="Tải thêm bệnh án để chọn"
+          variant="ghost"
+          loading={query.isFetchingNextPage}
+          onPress={() => {
+            void query.fetchNextPage();
+          }}
+        />
+      )}
+      {query.isError && records.length > 0 && (
+        <ErrorState description="Không tải được thêm bệnh án." onRetry={query.refetch} />
+      )}
+    </View>
   );
 }

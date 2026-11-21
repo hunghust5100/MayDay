@@ -8,13 +8,21 @@ const ts = require('typescript');
 const root = path.resolve(__dirname, '..');
 const resolve = Module._resolveFilename;
 Module._resolveFilename = function (request, ...args) {
-  return resolve.call(this, request.startsWith('@/') ? path.join(root, 'src', request.slice(2)) : request, ...args);
+  return resolve.call(
+    this,
+    request.startsWith('@/') ? path.join(root, 'src', request.slice(2)) : request,
+    ...args,
+  );
 };
 for (const extension of ['.ts', '.tsx'])
   require.extensions[extension] = (module, filename) => {
     const { outputText } = ts.transpileModule(fs.readFileSync(filename, 'utf8'), {
       fileName: filename,
-      compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX },
+      compilerOptions: {
+        module: ts.ModuleKind.CommonJS,
+        target: ts.ScriptTarget.ES2022,
+        jsx: ts.JsxEmit.ReactJSX,
+      },
     });
     module._compile(outputText, filename);
   };
@@ -24,16 +32,27 @@ Module._load = function (request, ...args) {
   if (request === 'react-native') return { Platform: { OS: 'web' } };
   if (request === '@/core/auth')
     return {
-      session: { getToken: () => clientUser?.token, getState: () => ({ status: 'signedIn' }), signOut: async () => {} },
+      session: {
+        getToken: () => clientUser?.token,
+        getState: () => ({ status: 'signedIn' }),
+        signOut: async () => {},
+      },
     };
   if (request === '@/core/config') return { env: { apiUrl: 'http://test/api/v1', apiTimeout: 1000 } };
   if (request === '@/shared/ui') return { toast: { error() {} } };
+  if (request === '@/features/media')
+    return load.call(this, path.join(root, 'src/features/media/api/answer-images.ts'), ...args);
   return load.call(this, request, ...args);
 };
 const { db, resetDb } = require('../src/mocks/db/store');
 const { issueToken } = require('../src/mocks/core/auth');
 const { handleMockRequest } = require('../src/mocks/server');
-const { validateForm, questionVisible, serializeAnswers, canFill } = require('../src/shared/utils/clinical-form');
+const {
+  validateForm,
+  questionVisible,
+  serializeAnswers,
+  canFill,
+} = require('../src/shared/utils/clinical-form');
 const { api } = require('../src/core/api/client');
 const { managementApi, normalizeFacility } = require('../src/features/facilities/api/management-api');
 const { recordsApi } = require('../src/features/medical-records/api/records-api');
@@ -197,7 +216,11 @@ async function test(name, action) {
       15,
       'POST',
       '/medical_records/',
-      { template_id: 'TMPL_URT_ACUTE', patient_id: 17, answers: [{ question_id: 'Q_REASON', answer_text: 'Ngứa' }] },
+      {
+        template_id: 'TMPL_URT_ACUTE',
+        patient_id: 17,
+        answers: [{ question_id: 'Q_REASON', answer_text: 'Ngứa' }],
+      },
       '1001',
     );
     assert.equal(r.patient_id, 15);
@@ -248,7 +271,10 @@ async function test(name, action) {
     assert.equal(r.created_by, 4);
     await expect(4, 'POST', '/medical_records/' + r.medical_record_id + '/accept', undefined, '3103');
     await expect(2, 'POST', '/medical_records/' + r.medical_record_id + '/accept');
-    await expect(2, 'PUT', '/medical_records/' + r.medical_record_id, { status: 'cancelled', instructions: 'Hủy ca' });
+    await expect(2, 'PUT', '/medical_records/' + r.medical_record_id, {
+      status: 'cancelled',
+      instructions: 'Hủy ca',
+    });
     await expect(2, 'PUT', '/medical_records/' + r.medical_record_id + '/answers', { answers: [] }, '4003');
   });
   await test('record visibility, filters and admin-only cascading deletion', async () => {
@@ -331,14 +357,23 @@ async function test(name, action) {
       {
         question_id: 'Q_ITCH_SLEEP',
         parent_question_id: 'Q_ITCH_LEVEL',
-        condition_rules: { logic: 'AND', rules: [{ question_id: 'Q_ITCH_LEVEL', operator: 'gte', value: 7 }] },
+        condition_rules: {
+          logic: 'AND',
+          rules: [{ question_id: 'Q_ITCH_LEVEL', operator: 'gte', value: 7 }],
+        },
         type_question: 'radio',
       },
     ];
     assert.equal(questionVisible(officialQuestions[1], { Q_ITCH: 'NO' }, officialQuestions), false);
     assert.equal(questionVisible(officialQuestions[1], { Q_ITCH: 'YES' }, officialQuestions), true);
-    assert.equal(questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 5 }, officialQuestions), false);
-    assert.equal(questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 8 }, officialQuestions), true);
+    assert.equal(
+      questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 5 }, officialQuestions),
+      false,
+    );
+    assert.equal(
+      questionVisible(officialQuestions[2], { Q_ITCH: 'YES', Q_ITCH_LEVEL: 8 }, officialQuestions),
+      true,
+    );
   });
   await test('actual feature API adapters use the mock transport end-to-end', async () => {
     clientUser = { token: issueToken(db.users.get(1)) };
@@ -348,12 +383,18 @@ async function test(name, action) {
         method: options.method ?? 'GET',
         path: parsed.pathname.replace('/api/v1', ''),
         query: Object.fromEntries(parsed.searchParams),
-        headers: Object.fromEntries(Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v])),
+        headers: Object.fromEntries(
+          Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+        ),
         body: options.body ? JSON.parse(options.body) : undefined,
       });
       return new Response(JSON.stringify(result.body), { status: result.status });
     };
-    const b = await managementApi.create('branches', { name: 'API test', address: 'Hà Nội', phone: '0243869999' });
+    const b = await managementApi.create('branches', {
+      name: 'API test',
+      address: 'Hà Nội',
+      phone: '0243869999',
+    });
     assert.equal((await managementApi.detail('branches', b.id)).name, 'API test');
     clientUser = { token: issueToken(db.users.get(2)) };
     const p = await patientsApi.create({
@@ -363,7 +404,10 @@ async function test(name, action) {
       gender: null,
       year_of_birth: null,
     });
-    assert.equal((await patientsApi.search({ keyword: '0933333333', page: 1, limit: 20 })).items[0].user_id, p.user_id);
+    assert.equal(
+      (await patientsApi.search({ keyword: '0933333333', page: 1, limit: 20 })).items[0].user_id,
+      p.user_id,
+    );
     const r = await recordsApi.create({ patient_id: p.user_id, template_id: 'TMPL_URT_ACUTE', answers: [] });
     await recordsApi.accept(r.medical_record_id);
     await recordsApi.saveAnswers(r.medical_record_id, [{ question_id: 'Q_ASSESSMENT', answer_text: 'Good' }]);
@@ -389,9 +433,21 @@ async function test(name, action) {
     await expect(15, 'DELETE', '/notifications/' + unread.id);
     await expect(15, 'DELETE', '/notifications/' + unread.id, undefined, '9102');
     await expect(15, 'POST', '/notifications/register_token', { device_type: 'android' }, '9101');
-    await expect(15, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'windows' }, '2003');
-    const t1 = await expect(15, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'Android' });
-    const t2 = await expect(2, 'POST', '/notifications/register_token', { fcm_token: 'tok_a', device_type: 'ios' });
+    await expect(
+      15,
+      'POST',
+      '/notifications/register_token',
+      { fcm_token: 'tok_a', device_type: 'windows' },
+      '2003',
+    );
+    const t1 = await expect(15, 'POST', '/notifications/register_token', {
+      fcm_token: 'tok_a',
+      device_type: 'Android',
+    });
+    const t2 = await expect(2, 'POST', '/notifications/register_token', {
+      fcm_token: 'tok_a',
+      device_type: 'ios',
+    });
     assert.equal(t1.id, t2.id);
     assert.equal(t2.user_id, 2);
   });
@@ -399,12 +455,19 @@ async function test(name, action) {
     // Dynamic RBAC: nurse (4) lacks permission -> 3102; grant manage_templates (4) -> allowed
     await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'RBAC' }, '3102');
     await expect(1, 'POST', '/role_permissions', { role_id: 4, permissions: [4] });
-    const createdTmpl = await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'Phiếu tùy biến' });
+    const createdTmpl = await expect(4, 'POST', '/templates', {
+      code_template: 'T_RBAC',
+      name: 'Phiếu tùy biến',
+    });
     assert.equal(createdTmpl.version, '1.0');
     await expect(4, 'POST', '/templates', { code_template: 'T_RBAC', name: 'Trùng' }, '4102');
 
     // Section + custom-coded Questions + condition_rules reference
-    const sec = await expect(4, 'POST', '/templates/T_RBAC/sections', { title: 'Phần 1', order: 1, filled_by: 'patdoc' });
+    const sec = await expect(4, 'POST', '/templates/T_RBAC/sections', {
+      title: 'Phần 1',
+      order: 1,
+      filled_by: 'patdoc',
+    });
     const q1 = await expect(4, 'POST', '/templates/sections/' + sec.section_id + '/questions', {
       question_id: 'CUSTOM_CHOICE',
       question_text: 'Có triệu chứng?',
@@ -422,7 +485,10 @@ async function test(name, action) {
       type_question: 'date',
       order: 2,
       is_required: 1,
-      condition_rules: { logic: 'AND', rules: [{ question_id: q1.question_id, operator: 'eq', value: 'CO' }] },
+      condition_rules: {
+        logic: 'AND',
+        rules: [{ question_id: q1.question_id, operator: 'eq', value: 'CO' }],
+      },
     });
     const treeBefore = await expect(4, 'GET', '/templates/T_RBAC');
 
@@ -431,7 +497,15 @@ async function test(name, action) {
       ...q1,
       placeholder: '',
       help_text: '',
-      options: [{ id: q1.options[1].id, option_text: 'Không', option_value: 'KHONG', order: 1, trigger_image_upload: 0 }],
+      options: [
+        {
+          id: q1.options[1].id,
+          option_text: 'Không',
+          option_value: 'KHONG',
+          order: 1,
+          trigger_image_upload: 0,
+        },
+      ],
     });
     assert.equal(schemaCheck.success, false);
     await expect(
@@ -451,14 +525,20 @@ async function test(name, action) {
     // Date support in clinical form validation/serialization
     assert.equal(Object.keys(validateForm(treeAfter, { CUSTOM_DATE: '2026-11-17' }, 'doctor')).length, 0);
     assert.ok(validateForm(treeAfter, { CUSTOM_DATE: '2026-02-30' }, 'doctor').CUSTOM_DATE);
-    assert.equal(serializeAnswers(treeAfter, { CUSTOM_DATE: '2026-11-17' }, 'doctor')[0].answer_text, '2026-11-17');
+    assert.equal(
+      serializeAnswers(treeAfter, { CUSTOM_DATE: '2026-11-17' }, 'doctor')[0].answer_text,
+      '2026-11-17',
+    );
 
     // Legacy clinical template reads cleanly via builder API adapter; TMPL_USED protection via real medical_records
     clientUser = { token: issueToken(db.users.get(1)) };
     const legacyDetail = await templatesApi.getDetail('TMPL_URT_CHRONIC');
     assert.equal(legacyDetail.code_template, 'TMPL_URT_CHRONIC');
     assert.equal(typeof legacyDetail.sections[0].section_id, 'number');
-    assert.deepEqual(legacyDetail.sections[0].questions.find((q) => q.question_id === 'Q_FOOD').show_if_answer, { option_values: ['food'] });
+    assert.deepEqual(
+      legacyDetail.sections[0].questions.find((q) => q.question_id === 'Q_FOOD').show_if_answer,
+      { option_values: ['food'] },
+    );
 
     const demoDetail = await templatesApi.getDetail('TMPL_DEMO');
     assert.equal(evaluateBranching(demoDetail, { Q_ITCH: 'YES', Q_LEVEL: 8 }).visible.Q_SLEEP, true);
@@ -479,22 +559,76 @@ async function test(name, action) {
     const elig = await expect(15, 'GET', '/uas7-scores/eligibility');
     assert.equal(elig.eligible, true);
     assert.equal(elig.medical_record_id, 5);
-    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 4, hss7: 1 }, '5003');
-    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 1, hss7: -1 }, '5004');
+    await expect(
+      15,
+      'POST',
+      '/uas7-scores',
+      { medical_record_id: 5, score_date: today, iss7: 4, hss7: 1 },
+      '5003',
+    );
+    await expect(
+      15,
+      'POST',
+      '/uas7-scores',
+      { medical_record_id: 5, score_date: today, iss7: 1, hss7: -1 },
+      '5004',
+    );
     await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, iss7: 1, hss7: 1 }, '5005');
-    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 3, score_date: today, iss7: 1, hss7: 1 }, '5001');
-    const score = await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 2, hss7: 3 }, '1001');
+    await expect(
+      15,
+      'POST',
+      '/uas7-scores',
+      { medical_record_id: 3, score_date: today, iss7: 1, hss7: 1 },
+      '5001',
+    );
+    const score = await expect(
+      15,
+      'POST',
+      '/uas7-scores',
+      { medical_record_id: 5, score_date: today, iss7: 2, hss7: 3 },
+      '1001',
+    );
     assert.equal(score.daily_score, 5);
-    await expect(15, 'POST', '/uas7-scores', { medical_record_id: 5, score_date: today, iss7: 1, hss7: 1 }, '5002');
+    await expect(
+      15,
+      'POST',
+      '/uas7-scores',
+      { medical_record_id: 5, score_date: today, iss7: 1, hss7: 1 },
+      '5002',
+    );
     await expect(17, 'GET', '/uas7-scores/patient/15', undefined, '3106');
     assert.equal((await expect(15, 'GET', '/uas7-scores/patient/15')).length, 7);
 
     // Prescriptions & Labs permissions + business rules
-    await expect(4, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] }, '3103');
-    await expect(15, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] }, '3103');
-    await expect(2, 'POST', '/prescriptions', { medical_record_id: 3, items: [{ medicine_name: 'Loratadine' }] }, '8003');
+    await expect(
+      4,
+      'POST',
+      '/prescriptions',
+      { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] },
+      '3103',
+    );
+    await expect(
+      15,
+      'POST',
+      '/prescriptions',
+      { medical_record_id: 5, items: [{ medicine_name: 'Loratadine' }] },
+      '3103',
+    );
+    await expect(
+      2,
+      'POST',
+      '/prescriptions',
+      { medical_record_id: 3, items: [{ medicine_name: 'Loratadine' }] },
+      '8003',
+    );
     await expect(2, 'POST', '/prescriptions', { medical_record_id: 5, items: [] }, '8001');
-    await expect(2, 'POST', '/prescriptions', { medical_record_id: 5, items: [{ medicine_name: '  ' }] }, '8002');
+    await expect(
+      2,
+      'POST',
+      '/prescriptions',
+      { medical_record_id: 5, items: [{ medicine_name: '  ' }] },
+      '8002',
+    );
     await expect(4, 'POST', '/lab-requests', { medical_record_id: 5, items: [{ test_name: 'IgE' }] }, '3103');
     await expect(2, 'POST', '/lab-requests', { medical_record_id: 5, items: [] }, '8101');
     await expect(2, 'POST', '/lab-requests', { medical_record_id: 5, items: [{ test_name: '' }] }, '8102');
@@ -508,7 +642,9 @@ async function test(name, action) {
         method: options.method ?? 'GET',
         path: parsed.pathname.replace('/api/v1', ''),
         query: Object.fromEntries(parsed.searchParams),
-        headers: Object.fromEntries(Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v])),
+        headers: Object.fromEntries(
+          Object.entries(options.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]),
+        ),
         body: options.body ? JSON.parse(options.body) : undefined,
       });
       return new Response(JSON.stringify(result.body), { status: result.status });
@@ -533,6 +669,17 @@ async function test(name, action) {
     const uasElig = await uas7Api.checkEligibility();
     assert.equal(uasElig.eligible, true);
     assert.equal((await uas7Api.getHistory(15)).length, 7);
+  });
+  await require('./checks/media-lesions.cjs')({
+    assert,
+    test,
+    expect,
+    request,
+    db,
+    handleMockRequest,
+    setClientUser: (id) => {
+      clientUser = { token: issueToken(db.users.get(id)) };
+    },
   });
   console.log('\n' + checks + ' contract scenarios passed.');
 })().catch((error) => {

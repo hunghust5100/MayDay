@@ -1,8 +1,11 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { canCreatePatient, ROLE_IDS, useSession } from '@/core/auth';
+import { getErrorMessage } from '@/core/api';
+import { QuestionImageField } from '@/features/media';
+import type { ImageSelections } from '@/shared/types/clinical-form';
 import {
   ClinicalForm,
   questionVisible,
@@ -17,6 +20,7 @@ import { recordsApi } from '../api/records-api';
 import { useCreateRecord } from '../hooks/useRecords';
 import { createRecordSchema } from '../schemas';
 import type { ClassificationQuestion } from '../types';
+import { saveRecordImages, visibleRecordImages } from '../api/record-media';
 
 function buildClassifierTemplate(questions: ClassificationQuestion[]): ClinicalTemplate {
   return {
@@ -41,6 +45,10 @@ export function MedicalRecordCreateScreen() {
   const [classification, setClassification] = useState<FormValues>({});
   const [values, setValues] = useState<FormValues>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [images, setImages] = useState<ImageSelections>({});
+  const [createdId, setCreatedId] = useState<number | null>(null);
+  const [finishing, setFinishing] = useState(false);
+  const submitting = useRef(false);
   const questions = useQuery({
     queryKey: ['medical-records', 'classification'],
     queryFn: ({ signal }) => recordsApi.classifyQuestions(signal),
@@ -52,26 +60,42 @@ export function MedicalRecordCreateScreen() {
   const classifier = useMemo(() => buildClassifierTemplate(questions.data ?? []), [questions.data]);
   if (!user) return null;
   const allowed = patient || (canCreatePatient(user.role_id) && /^[1-9]\d*$/.test(patientId ?? ''));
-  const submit = () => {
-    if (!template.data || create.isPending) return;
-    const validation = validateForm(template.data, values, actor);
+  const submit = async () => {
+    if (!template.data || create.isPending || submitting.current) return;
+    const desired = visibleRecordImages(template.data, values, images);
+    const validation = validateForm(template.data, values, actor, { images: desired });
     setErrors(validation);
     if (Object.keys(validation).length) return;
     const body = {
       template_id: template.data.code_template,
       ...(patient ? {} : { patient_id: Number(patientId) }),
-      answers: serializeAnswers(template.data, values, actor),
+      answers: serializeAnswers(template.data, values, actor, desired),
     };
     if (!createRecordSchema.safeParse(body).success) {
       toast.error('Thông tin bệnh án không hợp lệ.');
       return;
     }
-    create.mutate(body, {
-      onSuccess: (record) => {
-        toast.success('Đã tạo bệnh án.');
-        router.replace(`/${patient ? 'patient' : 'doctor'}/records/${record.medical_record_id}`);
-      },
-    });
+    submitting.current = true;
+    setFinishing(true);
+    let id = createdId;
+    try {
+      if (!id) {
+        const record = await create.mutateAsync(body);
+        id = record.medical_record_id;
+        setCreatedId(id);
+      } else if (body.answers.length) await recordsApi.saveAnswers(id, body.answers);
+      await saveRecordImages(id, template.data, values, desired, actor);
+      toast.success('Đã tạo bệnh án.');
+      router.replace(`/${patient ? 'patient' : 'doctor'}/records/${id}`);
+    } catch (error) {
+      if (id)
+        toast.error(
+          `Bệnh án #${id} đã tạo; chưa hoàn tất ảnh: ${getErrorMessage(error)}. Bấm tiếp tục để thử lại, không tạo thêm bệnh án.`,
+        );
+    } finally {
+      submitting.current = false;
+      setFinishing(false);
+    }
   };
   return (
     <Screen header={<AppHeader title="Khai báo bệnh án" onBack={router.back} />}>
@@ -119,6 +143,7 @@ export function MedicalRecordCreateScreen() {
                         {
                           onSuccess: () => {
                             setValues({});
+                            setImages({});
                             setErrors({});
                           },
                         },
@@ -140,17 +165,50 @@ export function MedicalRecordCreateScreen() {
                   <ClinicalForm
                     template={template.data}
                     values={values}
-                    onChange={setValues}
+                    onChange={(next) => {
+                      if (!finishing) setValues(next);
+                    }}
                     actor={actor}
                     errors={errors}
+                    renderAttachments={(question, editable) => (
+                      <QuestionImageField
+                        question={question}
+                        answer={values[question.question_id]}
+                        images={images[question.question_id] ?? []}
+                        editable={editable && !finishing}
+                        context={
+                          createdId
+                            ? {
+                                medical_record_id: createdId,
+                                question_id: question.question_id,
+                                category: 'answer',
+                              }
+                            : { category: 'answer' }
+                        }
+                        onChange={(next) =>
+                          setImages((current) => ({ ...current, [question.question_id]: next }))
+                        }
+                      />
+                    )}
                   />
-                  <Button title="Tạo bệnh án" loading={create.isPending} onPress={submit} />
+                  {createdId && (
+                    <Text tone="muted">
+                      Bệnh án #{createdId} đã được tạo. Tiếp tục để hoàn tất các ảnh còn thiếu.
+                    </Text>
+                  )}
+                  <Button
+                    title={createdId ? 'Tiếp tục hoàn tất ảnh' : 'Tạo bệnh án'}
+                    loading={create.isPending || finishing}
+                    onPress={() => {
+                      void submit();
+                    }}
+                  />
                 </>
               ) : null}
               <Button
                 title="Quay lại phân loại"
                 variant="ghost"
-                disabled={create.isPending}
+                disabled={create.isPending || finishing || createdId !== null}
                 onPress={() => {
                   classify.reset();
                   setErrors({});

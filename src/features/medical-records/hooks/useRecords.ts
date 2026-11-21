@@ -12,13 +12,16 @@ export function useRecords(filters: RecordFilters, patientId?: number) {
         : recordsApi.all({ ...filters, page, limit }, signal),
   });
 }
-export function useRecord(id: number) {
-  const enabled = Number.isInteger(id) && id > 0;
-  const detail = useQuery({
+export function useRecordDetail(id: number) {
+  return useQuery({
     queryKey: ['medical-records', 'detail', id],
     queryFn: ({ signal }) => recordsApi.detail(id, signal),
-    enabled,
+    enabled: Number.isInteger(id) && id > 0,
   });
+}
+export function useRecord(id: number) {
+  const enabled = Number.isInteger(id) && id > 0;
+  const detail = useRecordDetail(id);
   const summary = useQuery({
     queryKey: ['medical-records', 'summary', id],
     queryFn: ({ signal }) => recordsApi.summary(id, signal),
@@ -34,7 +37,11 @@ export function useRecord(id: number) {
 export function useRecordMutations(id: number) {
   const client = useQueryClient();
   const refresh = () => client.invalidateQueries({ queryKey: ['medical-records'] });
-  const accept = useMutation({ mutationFn: () => recordsApi.accept(id), onSuccess: refresh, onError: refresh });
+  const accept = useMutation({
+    mutationFn: () => recordsApi.accept(id),
+    onSuccess: refresh,
+    onError: refresh,
+  });
   const save = useMutation({
     mutationFn: (answers: AnswerInput[]) => recordsApi.saveAnswers(id, answers),
     onSuccess: refresh,

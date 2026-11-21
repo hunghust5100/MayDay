@@ -4,6 +4,7 @@ import { ROLE } from '../config';
 import type { Gender } from '../core/validate';
 import type { createClinicalSeed } from './clinical';
 import type { createModuleSeed } from './module-seed';
+import type { createMediaLesionSeed } from './media-lesions';
 import { createSeed, emptyPatient } from './seed';
 
 /** Các bảng của CSDL giả — đặt tên cột giống mô hình dữ liệu trong tài liệu API. */
@@ -52,29 +53,47 @@ export type RoleRow = {
   updated_at: string;
 };
 
-export type PermissionRow = { id: number; name: string; description: string | null; created_at: string; updated_at: string };
+export type PermissionRow = {
+  id: number;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 export type RolePermissionRow = { id: number; role_id: number; permission_id: number; created_at: string };
 
 /** Cơ sở vật chất — CRUD chi nhánh, khoa, phòng khám. */
 type Timestamps = { created_at: string; updated_at: string };
 export type BranchRow = Timestamps & { id: number; name: string; address: string; phone: string };
-export type DepartmentRow = Timestamps & { id: number; name: string; description: string | null; branch_id: number };
-export type RoomRow = Timestamps & { id: number; name: string; description: string | null; department_id: number | null };
-
-export type MockDb = ReturnType<typeof createClinicalSeed> & ReturnType<typeof createModuleSeed> & {
-  users: Map<number, UserRow>;
-  patients: Map<number, PatientRow>;
-  staffs: Map<number, StaffRow>;
-  roles: Map<number, RoleRow>;
-  permissions: Map<number, PermissionRow>;
-  role_permissions: RolePermissionRow[];
-  branches: Map<number, BranchRow>;
-  departments: Map<number, DepartmentRow>;
-  rooms: Map<number, RoomRow>;
-  /** `jti` của token đã đăng xuất / đổi mật khẩu (bảng `token_blacklist`). */
-  token_blacklist: Set<string>;
+export type DepartmentRow = Timestamps & {
+  id: number;
+  name: string;
+  description: string | null;
+  branch_id: number;
 };
+export type RoomRow = Timestamps & {
+  id: number;
+  name: string;
+  description: string | null;
+  department_id: number | null;
+};
+
+export type MockDb = ReturnType<typeof createClinicalSeed> &
+  ReturnType<typeof createModuleSeed> &
+  ReturnType<typeof createMediaLesionSeed> & {
+    users: Map<number, UserRow>;
+    patients: Map<number, PatientRow>;
+    staffs: Map<number, StaffRow>;
+    roles: Map<number, RoleRow>;
+    permissions: Map<number, PermissionRow>;
+    role_permissions: RolePermissionRow[];
+    branches: Map<number, BranchRow>;
+    departments: Map<number, DepartmentRow>;
+    rooms: Map<number, RoomRow>;
+    /** `jti` của token đã đăng xuất / đổi mật khẩu (bảng `token_blacklist`). */
+    token_blacklist: Set<string>;
+  };
 
 /** Dữ liệu chỉ nằm trong bộ nhớ: tải lại app là về trạng thái mẫu ban đầu. */
 export const db: MockDb = createSeed();
@@ -188,7 +207,8 @@ export function toStaff(user: UserRow) {
 }
 
 /** Chi tiết người dùng: Patient Profile nếu là bệnh nhân, Staff nếu là nhân viên. */
-export const toUserDetail = (user: UserRow) => (isPatientRole(user.role_id) ? toPatientProfile(user) : toStaff(user));
+export const toUserDetail = (user: UserRow) =>
+  isPatientRole(user.role_id) ? toPatientProfile(user) : toStaff(user);
 
 /** Kiểm tra vị trí công tác: tồn tại và đúng cấp (khoa thuộc chi nhánh, phòng thuộc khoa) → sai: 2003. */
 export function isValidWorkplace(branchId: number, departmentId: number, roomId: number | null | undefined) {

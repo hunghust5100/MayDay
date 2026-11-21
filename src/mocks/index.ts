@@ -61,7 +61,7 @@ function readHeaders(headers: HeadersInit | undefined): Record<string, string> {
 /** Body JSON; body không parse được → `INVALID` để handler trả `2007`. */
 function readBody(body: BodyInit | null | undefined): unknown {
   if (body === undefined || body === null) return undefined;
-  if (typeof body !== 'string') return body; // FormData… — chưa có endpoint mock nào dùng
+  if (typeof body !== 'string') return body; // Giữ FormData cho handler upload (web get/getAll, native getParts).
   try {
     return JSON.parse(body);
   } catch {
