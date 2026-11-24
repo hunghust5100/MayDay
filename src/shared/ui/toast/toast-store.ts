@@ -22,8 +22,8 @@ function emit() {
 
 function show(type: ToastType, message: string, duration = 3000, motion?: 'fade') {
   const id = nextId++;
-  // Giữ tối đa 3 toast cùng lúc.
-  items = [...items.slice(-2), { id, type, message, duration, ...(motion ? { motion } : {}) }];
+  // Thông báo mới thay thông báo cũ để tránh che nhiều nội dung trên màn hình nhỏ.
+  items = [{ id, type, message, duration, ...(motion ? { motion } : {}) }];
   emit();
   return id;
 }

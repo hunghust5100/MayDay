@@ -42,7 +42,7 @@ export function EpisodeDetailScreen() {
   };
   return (
     <Screen
-      header={<AppHeader title={episode.data?.name ?? 'Đợt tổn thương'} onBack={router.back} />}
+      header={<AppHeader title="Đợt tổn thương" onBack={() => router.canGoBack() ? router.back() : router.replace('/patient/lesions')} />}
       refreshControl={
         <RefreshControl
           refreshing={episode.isRefetching || locations.isRefetching}
@@ -59,8 +59,9 @@ export function EpisodeDetailScreen() {
       ) : episode.isError ? (
         <ErrorState description={episode.error.message} onRetry={() => episode.refetch()} />
       ) : episode.data ? (
-        <View className="gap-4">
+        <View className="gap-3 roomy:gap-4">
           <Card className="gap-2">
+            <Text variant="h2" accessibilityRole="header">{episode.data.name}</Text>
             <InfoRow
               label="Xuất hiện"
               value={episode.data.occurred_at ? formatDateTime(episode.data.occurred_at) : null}
@@ -98,7 +99,7 @@ export function EpisodeDetailScreen() {
           ) : !locations.data?.length ? (
             <EmptyState
               title="Chưa ghi nhận vị trí"
-              description="Thêm vị trí để theo dõi ảnh khởi phát, đỉnh điểm và hồi phục."
+              description="Thêm vị trí để ghi ảnh tiến triển."
             />
           ) : (
             locations.data.map((location) => (
@@ -181,7 +182,7 @@ export function EpisodeDetailScreen() {
       <ConfirmDialog
         visible={confirm}
         title="Xóa cả đợt tổn thương?"
-        description="Các vị trí và bản ghi ảnh tiến triển trong đợt này sẽ bị xóa. Ảnh gốc trong kho vẫn được giữ lại."
+        description="Xóa đợt và dữ liệu theo dõi. Ảnh gốc vẫn ở trong kho."
         destructive
         loading={remove.isPending}
         onCancel={() => setConfirm(false)}
@@ -189,7 +190,8 @@ export function EpisodeDetailScreen() {
           remove.mutate(undefined, {
             onSuccess: () => {
               toast.success('Đã xóa đợt tổn thương.');
-              router.back();
+              if (router.canGoBack()) router.back();
+              else router.replace('/patient/lesions');
             },
           })
         }

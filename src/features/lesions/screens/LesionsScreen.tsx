@@ -49,15 +49,11 @@ export function LesionsScreen() {
         />
       }
     >
-      <View className="gap-4">
+      <View className="gap-3 roomy:gap-4">
         <RecordSelector value={recordId} onChange={setRecordId} preferActive />
-        <Text tone="muted">
-          Theo dõi từng đợt xuất hiện, vị trí cơ thể và ảnh ở ba mốc: khởi phát, đỉnh điểm, trở lại bình
-          thường.
-        </Text>
         {record.isError && <ErrorState description={record.error.message} onRetry={() => record.refetch()} />}
         {recordId && !writable && record.data && (
-          <Text tone="muted">Bệnh án đã đóng. Chọn bệnh án đang chờ hoặc đang khám để ghi nhận mới.</Text>
+          <Text tone="muted">Chọn bệnh án đang chờ hoặc đang khám để ghi nhận.</Text>
         )}
         <Button
           title="Ghi nhận đợt tổn thương"

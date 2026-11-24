@@ -28,6 +28,7 @@ export function Input({
   className,
   onFocus,
   onBlur,
+  multiline,
   ...props
 }: InputProps) {
   const [focused, setFocused] = useState(false);
@@ -35,20 +36,35 @@ export function Input({
   return (
     <View
       className={cn(
-        'h-[54px] flex-row items-center gap-2.5 rounded-input border-[1.5px] border-border bg-surface px-4',
+        'min-w-0 flex-row gap-2.5 rounded-input border-[1.5px] border-border bg-surface px-3 roomy:px-4',
+        multiline
+          ? 'min-h-24 items-start py-2 roomy:min-h-28'
+          : 'min-h-[48px] items-center roomy:min-h-[54px]',
         focused && 'border-primary',
         invalid && 'border-danger',
         disabled && 'bg-surface-2',
         containerClassName,
       )}
-      style={focused ? { boxShadow: `0px 0px 0px 4px ${invalid ? colors.danger.soft : colors.primary.soft}` } : undefined}>
+      style={
+        focused
+          ? { boxShadow: `0px 0px 0px 4px ${invalid ? colors.danger.soft : colors.primary.soft}` }
+          : undefined
+      }
+    >
       {leftIcon && <Icon as={leftIcon} size={20} color={focused ? 'primary' : 'muted'} />}
       <TextInput
         ref={ref}
         editable={!disabled}
+        multiline={multiline}
+        textAlignVertical={multiline ? 'top' : undefined}
         placeholderTextColor={colors.subtle}
         selectionColor={colors.primary.DEFAULT}
-        className={cn('h-full flex-1 py-0 font-sans text-md text-text outline-none', disabled && 'text-muted', className)}
+        className={cn(
+          'min-w-0 flex-1 py-0 font-sans text-md text-text outline-none',
+          multiline ? 'min-h-20 roomy:min-h-24' : 'min-h-[44px] py-1.5',
+          disabled && 'text-muted',
+          className,
+        )}
         onFocus={(event) => {
           setFocused(true);
           onFocus?.(event);
@@ -59,7 +75,7 @@ export function Input({
         }}
         {...props}
       />
-      {right}
+      {right && <View className="shrink-0">{right}</View>}
     </View>
   );
 }

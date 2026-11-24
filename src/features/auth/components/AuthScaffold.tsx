@@ -1,74 +1,44 @@
 import { StatusBar } from 'expo-status-bar';
 import { ChevronLeft, HeartPulse } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Pressable, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { View } from 'react-native';
 
 import { APP_NAME } from '@/shared/constants';
-import { shadowStyle } from '@/shared/theme';
-import { Icon, Screen, Text } from '@/shared/ui';
-
-import { SecurityNote } from './SecurityNote';
+import { Card, Icon, IconButton, Screen, Text } from '@/shared/ui';
 
 type AuthScaffoldProps = {
   title: string;
-  subtitle: string;
-  /** Có thì hiện nút quay lại trên header. */
+  subtitle?: string;
   onBack?: () => void;
-  /** Nội dung trong thẻ trắng (form). */
   children: ReactNode;
-  /** Phần dưới thẻ: liên kết chuyển màn… */
   footer?: ReactNode;
 };
 
-/**
- * Khung chung của các màn xác thực: header xanh tràn viền (logo, tiêu đề) + thẻ form nổi lên đè header.
- */
 export function AuthScaffold({ title, subtitle, onBack, children, footer }: AuthScaffoldProps) {
-  const insets = useSafeAreaInsets();
-
   return (
-    <Screen padded={false} safeTop={false} contentClassName="pb-6">
-      <StatusBar style="light" />
-      <View className="overflow-hidden rounded-b-[32px] bg-primary px-6 pb-16" style={{ paddingTop: insets.top + 20 }}>
-        {/* Họa tiết trang trí */}
-        <View className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-white/10" />
-        <View className="absolute -right-6 top-24 h-28 w-28 rounded-full bg-white/10" />
-        <View className="absolute -bottom-24 -left-16 h-56 w-56 rounded-full bg-primary-strong/40" />
-
-        <View className="flex-row items-center gap-3">
-          {onBack && (
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel="Quay lại"
-              hitSlop={8}
-              onPress={onBack}
-              className="h-10 w-10 items-center justify-center rounded-full bg-white/15 active:opacity-70">
-              <Icon as={ChevronLeft} size={22} color="on-primary" />
-            </Pressable>
-          )}
-          <View className="h-10 w-10 items-center justify-center rounded-xl bg-white">
-            <Icon as={HeartPulse} size={22} color="primary" />
+    <Screen contentClassName="justify-center py-4 roomy:py-8">
+      <StatusBar style="dark" />
+      <View className="w-full max-w-[460px] self-center gap-4 roomy:gap-6">
+        <View className="flex-row items-center gap-2">
+          {onBack && <IconButton icon={ChevronLeft} accessibilityLabel="Quay lại" onPress={onBack} />}
+          <View className="h-[40px] w-[40px] items-center justify-center rounded-input bg-primary">
+            <Icon as={HeartPulse} size={23} color="on-primary" />
           </View>
-          <Text variant="h2" tone="inverse">
+          <Text variant="h2" tone="primary">
             {APP_NAME}
           </Text>
         </View>
-
-        <Text variant="display" tone="inverse" className="mt-8" accessibilityRole="header">
-          {title}
-        </Text>
-        <Text variant="body-lg" className="mt-2 text-white/80">
-          {subtitle}
-        </Text>
+        <Card padding="lg" className="gap-4 roomy:gap-5">
+          <View className="gap-1">
+            <Text variant="h1" accessibilityRole="header">
+              {title}
+            </Text>
+            {subtitle && <Text tone="muted">{subtitle}</Text>}
+          </View>
+          {children}
+        </Card>
+        {footer && <View className="gap-2">{footer}</View>}
       </View>
-
-      <View className="-mt-10 mx-5 rounded-sheet bg-surface p-5" style={shadowStyle.raised}>
-        {children}
-      </View>
-
-      {footer && <View className="mx-5 mt-6">{footer}</View>}
-      <SecurityNote className="mt-auto pt-8" />
     </Screen>
   );
 }

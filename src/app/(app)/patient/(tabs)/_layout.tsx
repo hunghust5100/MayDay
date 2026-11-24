@@ -1,12 +1,16 @@
 import { Tabs } from 'expo-router/tabs';
 import { Activity, Bell, ClipboardList, House, UserRound } from 'lucide-react-native';
 
-import { TabBar } from '@/shared/ui';
+import { TabBar, TabScene } from '@/shared/ui';
 
 /** Thanh tab dưới đáy — Bệnh nhân. */
 export default function PatientTabsLayout() {
   return (
-    <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+    <Tabs
+      tabBar={(props) => <TabBar {...props} />}
+      screenLayout={({ children }) => <TabScene>{children}</TabScene>}
+      screenOptions={{ headerShown: false }}
+    >
       <Tabs.Screen
         name="index"
         options={{ title: 'Trang chủ', tabBarIcon: ({ color }) => <House color={color} size={24} /> }}

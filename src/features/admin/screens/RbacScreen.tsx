@@ -26,23 +26,37 @@ type Tab = 'roles' | 'permissions';
 /** Sắp vai trò theo cây (cha trước, con thụt vào) từ `parent_role_id`. */
 function flattenTree(roles: Role[]) {
   const ids = new Set(roles.map((r) => r.id));
-  const result: { role: Role; depth: number }[] = [];
-  const visit = (parentId: number | null, depth: number) => {
+  const result: Role[] = [];
+  const seen = new Set<number>();
+  const visit = (parentId: number | null) => {
     roles
-      .filter((r) => (parentId === null ? r.parent_role_id === null || !ids.has(r.parent_role_id) : r.parent_role_id === parentId))
+      .filter((r) =>
+        parentId === null
+          ? r.parent_role_id === null || !ids.has(r.parent_role_id)
+          : r.parent_role_id === parentId,
+      )
       .sort((a, b) => a.id - b.id)
       .forEach((role) => {
-        result.push({ role, depth });
-        if (depth < 10) visit(role.id, depth + 1);
+        if (seen.has(role.id)) return;
+        seen.add(role.id);
+        result.push(role);
+        visit(role.id);
       });
   };
-  visit(null, 0);
+  visit(null);
+  result.push(...roles.filter((role) => !seen.has(role.id)));
   return result;
 }
 
 function Leading({ icon, tone }: { icon: typeof ShieldCheck; tone: 'primary' | 'info' }) {
   return (
-    <View className={tone === 'primary' ? 'h-10 w-10 items-center justify-center rounded-full bg-primary-soft' : 'h-10 w-10 items-center justify-center rounded-full bg-info-soft'}>
+    <View
+      className={
+        tone === 'primary'
+          ? 'h-10 w-10 items-center justify-center rounded-full bg-primary-soft'
+          : 'h-10 w-10 items-center justify-center rounded-full bg-info-soft'
+      }
+    >
       <Icon as={icon} size={20} color={tone === 'primary' ? 'primary-strong' : 'info'} />
     </View>
   );
@@ -57,19 +71,17 @@ function RolesList() {
 
   return (
     <Card padding="none" className="px-4">
-      {flattenTree(roles).map(({ role, depth }, index) => {
+      {flattenTree(roles).map((role, index) => {
         const parent = role.parent_role_id === null ? undefined : byId.get(role.parent_role_id);
         return (
           <Fragment key={role.id}>
             {index > 0 && <Divider />}
-            <View style={{ paddingLeft: depth * 18 }}>
-              <ListItem
-                title={roleTitle(role)}
-                description={parent ? `${role.name} · thuộc ${roleTitle(parent)}` : role.name}
-                leading={<Leading icon={ShieldCheck} tone="primary" />}
-                onPress={() => router.push(`/admin/roles/${role.id}`)}
-              />
-            </View>
+            <ListItem
+              title={roleTitle(role)}
+              description={parent ? `Thuộc ${roleTitle(parent)}` : undefined}
+              leading={<Leading icon={ShieldCheck} tone="primary" />}
+              onPress={() => router.push(`/admin/roles/${role.id}`)}
+            />
           </Fragment>
         );
       })}
@@ -91,7 +103,7 @@ function PermissionsList() {
           {index > 0 && <Divider />}
           <ListItem
             title={permission.description || permission.name}
-            description={permission.name}
+            description={permission.description ? undefined : permission.name}
             leading={<Leading icon={KeyRound} tone="info" />}
             onPress={() => router.push(`/admin/permissions/${permission.id}`)}
           />
@@ -111,7 +123,6 @@ export function RbacScreen() {
       header={
         <ScreenTitle
           title="Phân quyền"
-          eyebrow="Vai trò & quyền hạn (RBAC)"
           right={
             <IconButton
               icon={Plus}
@@ -121,7 +132,8 @@ export function RbacScreen() {
             />
           }
         />
-      }>
+      }
+    >
       <SegmentedControl
         options={[
           { value: 'roles', label: 'Vai trò' },

@@ -32,19 +32,19 @@ export function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <View className={cn('items-center justify-center px-6 py-10', fill && 'flex-1', className)}>
+    <View className={cn('items-center justify-center px-4 py-6 roomy:px-6 roomy:py-8', fill && 'flex-1', className)}>
       <View
         className={cn(
-          'mb-4 h-[72px] w-[72px] items-center justify-center rounded-full',
+          'mb-3 h-[52px] w-[52px] items-center justify-center rounded-tile',
           tone === 'danger' ? 'bg-danger-soft' : 'bg-primary-soft',
         )}>
-        <Icon as={icon} size={32} color={tone === 'danger' ? 'danger' : 'primary'} />
+        <Icon as={icon} size={24} color={tone === 'danger' ? 'danger' : 'primary'} />
       </View>
       <Text variant="h3" align="center">
         {title}
       </Text>
       {description && (
-        <Text tone="muted" align="center" className="mt-1.5">
+        <Text tone="muted" align="center" className="mt-1.5 max-w-[380px]">
           {description}
         </Text>
       )}

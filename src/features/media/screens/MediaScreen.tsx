@@ -18,7 +18,7 @@ import {
   Text,
   toast,
 } from '@/shared/ui';
-import { formatDateTime } from '@/shared/utils';
+import { formatDateTime, removeDiacritics } from '@/shared/utils';
 import { MediaUploadPanel } from '../components/MediaUploadPanel';
 import { useDeleteMedia, useMedia } from '../hooks/useMedia';
 
@@ -42,6 +42,7 @@ export function MediaScreen() {
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const recordNumber = recordId && /^[1-9]\d*$/.test(recordId) ? Number(recordId) : 0;
   // Status supplied by the originating record screen is a presentation hint.
   // The API checks the current record status and permissions on every upload.
@@ -49,11 +50,9 @@ export function MediaScreen() {
   const [selected, setSelected] = useState<string | null>(null);
   const [viewer, setViewer] = useState<{ images: string[]; index: number } | null>(null);
   const [confirm, setConfirm] = useState<string | null>(null);
+  const term = removeDiacritics(search.trim());
   const items = (library.data ?? []).filter(
-    (a) =>
-      [a.file_name, a.description, a.category].some((s) =>
-        s?.toLocaleLowerCase('vi').includes(search.trim().toLocaleLowerCase('vi')),
-      ) || !search.trim(),
+    (a) => !term || [a.file_name, a.description, a.category].some((value) => value && removeDiacritics(value).includes(term)),
   );
   const current = library.data?.find((item) => item.id === selected);
   return (
@@ -85,20 +84,19 @@ export function MediaScreen() {
           }}
           ListHeaderComponent={
             <View className="gap-4 pb-4">
-              <Text tone="muted">Lưu ảnh để dùng lại trong phiếu khám và theo dõi tổn thương.</Text>
               {user && userId === user.user_id && canUploadMedia(user.role_id) && (
                 <Card className="gap-3">
                   <Button
                     title={uploadOpen ? 'Thu gọn tải ảnh' : 'Tải ảnh mới'}
                     variant="soft"
-                    disabled={!canUpload}
+                    disabled={!canUpload || uploading}
                     onPress={() => setUploadOpen(!uploadOpen)}
                   />
                   {!!recordNumber && !canUpload && (
                     <Text tone="muted">Chỉ tải ảnh gắn với bệnh án đang chờ hoặc đang khám.</Text>
                   )}
-                  {uploadOpen && canUpload && (
-                    <>
+                  {canUpload && (
+                    <View className={uploadOpen ? "gap-3" : "hidden"}>
                       <TextField
                         label="Phân loại (tùy chọn)"
                         placeholder="VD: tổn thương, phiếu khám"
@@ -107,13 +105,14 @@ export function MediaScreen() {
                       />
                       <TextField label="Mô tả (tùy chọn)" value={description} onChange={setDescription} />
                       <MediaUploadPanel
+                        onBusyChange={setUploading}
                         context={{
                           category: category || undefined,
                           description: description || undefined,
                           medical_record_id: recordNumber || undefined,
                         }}
                       />
-                    </>
+                    </View>
                   )}
                 </Card>
               )}
@@ -165,8 +164,7 @@ export function MediaScreen() {
           )}
           ListFooterComponent={
             <Text tone="muted">
-              Ảnh trong kho có thể dùng lại cho phiếu khám hoặc ảnh tiến triển. Gỡ liên kết ở phiếu khám không
-              xóa ảnh gốc.
+              Gỡ ảnh khỏi phiếu khám vẫn giữ ảnh gốc trong kho.
             </Text>
           }
         />
@@ -210,7 +208,7 @@ export function MediaScreen() {
       <ConfirmDialog
         visible={confirm !== null}
         title="Xóa tệp ảnh gốc?"
-        description="Ảnh và các liên kết sử dụng ảnh sẽ bị xóa. Ảnh gắn với bệnh án đã đóng được bảo vệ và không thể xóa."
+        description="Xóa ảnh gốc và các liên kết. Ảnh trong bệnh án đã đóng được giữ lại."
         destructive
         loading={remove.isPending}
         onCancel={() => setConfirm(null)}

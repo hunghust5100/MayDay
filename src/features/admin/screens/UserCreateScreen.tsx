@@ -39,7 +39,7 @@ export function UserCreateScreen() {
 
   return (
     <Screen
-      header={<AppHeader title="Thêm người dùng" onBack={router.back} />}
+      header={<AppHeader title="Thêm người dùng" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}
       footer={<Button title="Tạo tài khoản" fullWidth loading={create.isPending} onPress={() => submit()} />}>
       <View className="gap-[18px] pb-4">
         <FormField
@@ -64,7 +64,7 @@ export function UserCreateScreen() {
           control={control}
           name="role_id"
           render={({ value, onChange, error }) => (
-            <RoleSelect value={value} onChange={onChange} error={error} hint="Nhân viên y tế nên tạo bằng “Thêm nhân viên” để gán luôn nơi công tác" />
+            <RoleSelect value={value} onChange={onChange} error={error} hint="Dùng “Thêm nhân viên” để chọn nơi công tác." />
           )}
         />
         <FormField

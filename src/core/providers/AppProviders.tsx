@@ -10,13 +10,16 @@ import { focusManager, QueryClientProvider } from '@tanstack/react-query';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ReactNode } from 'react';
-import { AppState, Platform } from 'react-native';
+import { AppState, Platform, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { queryClient } from '@/core/api';
-import { session } from '@/core/auth';
-import { ToastHost } from '@/shared/ui';
+import { session, useSession } from '@/core/auth';
+import { ScreenNoticeContext, Text, ToastHost } from '@/shared/ui';
+
+import { startConnectivity, useOnline } from './connectivity';
+import { restoreOfflineCache, startOfflineCache } from './offline-cache';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -26,18 +29,6 @@ function useAppFocusRefetch() {
     if (Platform.OS === 'web') return;
     const subscription = AppState.addEventListener('change', (status) => focusManager.setFocused(status === 'active'));
     return () => subscription.remove();
-  }, []);
-}
-
-/** Đăng xuất → xóa toàn bộ cache dữ liệu của người dùng cũ. */
-function useClearCacheOnSignOut() {
-  useEffect(() => {
-    let previous = session.getState().status;
-    return session.subscribe(() => {
-      const current = session.getState().status;
-      if (previous === 'signedIn' && current === 'signedOut') queryClient.clear();
-      previous = current;
-    });
   }, []);
 }
 
@@ -51,14 +42,30 @@ export function AppProviders({ children }: { children: ReactNode }) {
     BeVietnamPro_800ExtraBold,
   });
   const [sessionReady, setSessionReady] = useState(false);
+  const online = useOnline();
+  const auth = useSession();
   // Lỗi font thì vẫn chạy bằng font hệ thống.
   const ready = (fontsLoaded || Boolean(fontError)) && sessionReady;
 
   useEffect(() => {
-    session
-      .restore()
-      .catch(() => session.signOut())
-      .finally(() => setSessionReady(true));
+    let active = true;
+    let stopCache: (() => void) | undefined;
+    const restoreSession = session.restore().catch(() => session.signOut().catch(() => {}));
+    // Initialize retention defaults before reloading inactive queries.
+    Promise.all([
+      startConnectivity(),
+      restoreSession.then(async () => {
+        if (!active) return;
+        stopCache = startOfflineCache();
+        await restoreOfflineCache();
+      }),
+    ]).catch(() => {}).finally(() => {
+      if (active) setSessionReady(true);
+    });
+    return () => {
+      active = false;
+      stopCache?.();
+    };
   }, []);
 
   useEffect(() => {
@@ -66,7 +73,6 @@ export function AppProviders({ children }: { children: ReactNode }) {
   }, [ready]);
 
   useAppFocusRefetch();
-  useClearCacheOnSignOut();
 
   // Giữ splash tới khi font + phiên đăng nhập sẵn sàng.
   if (!ready) return null;
@@ -76,7 +82,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
           <StatusBar style="dark" />
-          {children}
+          <ScreenNoticeContext.Provider value={online ? null : (
+            <View className="bg-warning-soft px-3 py-1.5">
+              <Text variant="caption" tone="warning" align="center" accessibilityLiveRegion="polite">
+                {auth.status === 'signedIn' ? 'Ngoại tuyến · Có thể xem dữ liệu đã tải' : 'Ngoại tuyến · Kết nối mạng để tiếp tục'}
+              </Text>
+            </View>
+          )}>
+            {children}
+          </ScreenNoticeContext.Provider>
           <ToastHost />
         </QueryClientProvider>
       </SafeAreaProvider>

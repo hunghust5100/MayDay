@@ -8,9 +8,9 @@ import { Text } from '../text/Text';
 
 const badge = tv({
   slots: {
-    base: 'h-[26px] flex-row items-center gap-1.5 self-start rounded-full px-2.5',
-    dot: 'h-1.5 w-1.5 rounded-full',
-    label: 'font-sans-semibold text-xs',
+    base: 'min-h-[26px] max-w-full flex-row items-center gap-1.5 self-start rounded-xl px-2.5 py-1',
+    dot: 'h-1.5 w-1.5 shrink-0 rounded-full',
+    label: 'min-w-0 shrink font-sans-semibold text-xs',
   },
   variants: {
     tone: {

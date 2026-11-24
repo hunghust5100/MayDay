@@ -8,7 +8,7 @@ import { Icon, type IconColor } from '../icon/Icon';
 import { Text } from '../text/Text';
 
 const iconButton = tv({
-  base: 'h-11 w-11 items-center justify-center rounded-btn active:opacity-75',
+  base: 'h-[44px] w-[44px] shrink-0 items-center justify-center rounded-btn active:opacity-75',
   variants: {
     variant: {
       surface: 'border border-border bg-surface',

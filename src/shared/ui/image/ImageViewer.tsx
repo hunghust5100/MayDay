@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
-import { X } from 'lucide-react-native';
-import { useState } from 'react';
+import { ChevronLeft, ChevronRight, X } from 'lucide-react-native';
+import { useRef, useState } from 'react';
 import { FlatList, Modal, Pressable, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -21,6 +21,13 @@ export function ImageViewer({ visible, onClose, images, initialIndex = 0, captio
   const { width, height } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const [index, setIndex] = useState(initialIndex);
+  const list = useRef<FlatList<string>>(null);
+  const move = (offset: number) => {
+    const next = index + offset;
+    if (next < 0 || next >= images.length) return;
+    list.current?.scrollToIndex({ index: next });
+    setIndex(next);
+  };
 
   return (
     <Modal
@@ -31,14 +38,19 @@ export function ImageViewer({ visible, onClose, images, initialIndex = 0, captio
       onShow={() => setIndex(initialIndex)}>
       <View className="flex-1 bg-black">
         <FlatList
+          ref={list}
           data={images}
-          keyExtractor={(uri, i) => `${i}-${uri}`}
+          keyExtractor={(_, i) => String(i)}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
           initialScrollIndex={initialIndex}
           getItemLayout={(_, i) => ({ length: width, offset: width * i, index: i })}
-          onMomentumScrollEnd={(e) => setIndex(Math.round(e.nativeEvent.contentOffset.x / width))}
+          onScroll={(e) => {
+            const page = Math.round(e.nativeEvent.contentOffset.x / width);
+            if (page >= 0 && page < images.length) setIndex(page);
+          }}
+          scrollEventThrottle={32}
           renderItem={({ item }) => (
             <View style={{ width, height }}>
               <Image source={{ uri: item }} style={{ flex: 1 }} contentFit="contain" />
@@ -60,6 +72,27 @@ export function ImageViewer({ visible, onClose, images, initialIndex = 0, captio
             <Icon as={X} size={22} color="on-primary" />
           </Pressable>
         </View>
+
+        {images.length > 1 && (
+          <View pointerEvents="box-none" className="absolute left-3 right-3 flex-row justify-between" style={{ top: '46%' }}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ảnh trước"
+              disabled={index === 0}
+              onPress={() => move(-1)}
+              className="h-11 w-11 items-center justify-center rounded-full bg-black/70 disabled:opacity-40">
+              <Icon as={ChevronLeft} size={24} color="on-primary" />
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Ảnh tiếp theo"
+              disabled={index >= images.length - 1}
+              onPress={() => move(1)}
+              className="h-11 w-11 items-center justify-center rounded-full bg-black/70 disabled:opacity-40">
+              <Icon as={ChevronRight} size={24} color="on-primary" />
+            </Pressable>
+          </View>
+        )}
 
         {captions?.[index] && (
           <View className="absolute left-4 right-4 items-center" style={{ bottom: insets.bottom + 24 }}>

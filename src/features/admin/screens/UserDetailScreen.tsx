@@ -132,7 +132,7 @@ export function UserDetailScreen() {
       header={
         <AppHeader
           title="Chi tiết người dùng"
-          onBack={router.back}
+          onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')}
           right={user && <IconButton icon={Pencil} accessibilityLabel="Sửa" onPress={() => router.push(`/admin/users/${id}/edit`)} />}
         />
       }>

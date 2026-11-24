@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Pill, Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -12,6 +12,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   Divider,
   EmptyState,
   ErrorState,
@@ -46,6 +47,9 @@ export function PrescriptionsScreen() {
   const listQuery = usePrescriptions(recordId);
   const createMutation = useCreatePrescription(recordId);
 
+  const [nextRecordId, setNextRecordId] = useState<number | null>(null);
+  const submitting = useRef(false);
+
   const form = useZodForm(prescriptionSchema, {
     defaultValues: { note: '', items: [{ ...EMPTY_ITEM }] },
   });
@@ -55,10 +59,21 @@ export function PrescriptionsScreen() {
     name: 'items',
   });
 
+  const { isDirty } = form.formState;
+  const selectRecord = (nextId: number) => {
+    if (nextId === recordId || submitting.current) return;
+    if (recordId !== null && isDirty) {
+      setNextRecordId(nextId);
+      return;
+    }
+    setRecordId(nextId);
+  };
+
   const onBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const onSubmit = form.handleSubmit((values: PrescriptionFormValues) => {
-    if (!recordId) return;
+  const submit = (values: PrescriptionFormValues) => {
+    if (!recordId || submitting.current) return;
+    submitting.current = true;
     createMutation.mutate(
       {
         medical_record_id: recordId,
@@ -72,34 +87,34 @@ export function PrescriptionsScreen() {
         })),
       },
       {
+        onSettled: () => {
+          submitting.current = false;
+        },
         onSuccess: () => {
           form.reset({ note: '', items: [{ ...EMPTY_ITEM }] });
         },
       },
     );
-  });
+  };
 
   return (
     <Screen header={<AppHeader title="Đơn thuốc" onBack={onBack} />}>
-      <View className="gap-4">
+      <View className="gap-3 roomy:gap-4">
         <RecordSelector
           value={recordId}
-          onChange={setRecordId}
+          onChange={selectRecord}
+          disabled={createMutation.isPending}
           initialRecordId={parseRecordId(paramRecordId)}
         />
 
-        {recordId !== null && canPrescribe && (
-          <Card padding="lg" className="gap-4">
-            <SectionHeader
-              title="Kê đơn thuốc mới"
-              actionLabel="Thêm thuốc"
-              onAction={() => append({ ...EMPTY_ITEM })}
-            />
+        {recordId !== null && canPrescribe && listQuery.isSuccess && !listQuery.data?.length && (
+          <Card padding="lg" className="gap-3 roomy:gap-4">
+            <SectionHeader title="Kê đơn thuốc" className="mb-0 mt-0" />
 
             {fields.map((fieldItem, index) => (
               <View key={fieldItem.id} className="gap-3 rounded-card border border-border bg-bg p-3">
-                <View className="flex-row items-center justify-between">
-                  <Text variant="label">Thuốc #{index + 1}</Text>
+                <View className="flex-row items-center gap-2">
+                  <Text variant="label" className="min-w-0 flex-1">Thuốc {index + 1}</Text>
                   {fields.length > 1 && (
                     <Button
                       title="Xóa"
@@ -127,8 +142,8 @@ export function PrescriptionsScreen() {
                   )}
                 />
 
-                <View className="flex-row gap-3">
-                  <View className="flex-1">
+                <View className="gap-3 roomy:flex-row">
+                  <View className="min-w-0 roomy:flex-1">
                     <FormField
                       control={form.control}
                       name={`items.${index}.dosage`}
@@ -143,7 +158,7 @@ export function PrescriptionsScreen() {
                       )}
                     />
                   </View>
-                  <View className="flex-1">
+                  <View className="min-w-0 roomy:flex-1">
                     <FormField
                       control={form.control}
                       name={`items.${index}.duration`}
@@ -195,7 +210,7 @@ export function PrescriptionsScreen() {
               name="note"
               render={(field) => (
                 <TextField
-                  label="Ghi chú chung cho đơn"
+                  label="Ghi chú đơn thuốc"
                   placeholder="Lời dặn thêm cho bệnh nhân..."
                   multiline
                   value={field.value}
@@ -217,7 +232,7 @@ export function PrescriptionsScreen() {
                 title={createMutation.isPending ? 'Đang lưu...' : 'Lưu đơn thuốc'}
                 fullWidth
                 loading={createMutation.isPending}
-                onPress={() => void onSubmit()}
+                onPress={() => void form.handleSubmit(submit)()}
               />
             </View>
           </Card>
@@ -225,19 +240,15 @@ export function PrescriptionsScreen() {
 
         {recordId !== null && (
           <Card padding="lg" className="gap-3">
-            <SectionHeader title={`Đơn thuốc bệnh án #${recordId}`} />
+            <SectionHeader title="Đơn thuốc đã kê" className="mb-0 mt-0" />
             {listQuery.isLoading ? (
               <Spinner />
             ) : listQuery.isError ? (
               <ErrorState onRetry={() => void listQuery.refetch()} />
             ) : (listQuery.data?.length ?? 0) === 0 ? (
-              <EmptyState
-                icon={Pill}
-                title="Chưa có đơn thuốc"
-                description="Bệnh án này chưa được kê đơn thuốc."
-              />
+              <EmptyState icon={Pill} title="Chưa có đơn thuốc" />
             ) : (
-              <View className="gap-4">
+              <View className="gap-3 roomy:gap-4">
                 {listQuery.data!.map((rx, rxIndex) => (
                   <View key={rx.id} className="gap-2">
                     {rxIndex > 0 && <Divider className="mb-2" />}
@@ -251,10 +262,12 @@ export function PrescriptionsScreen() {
                     {rx.items.map((item, idx) => (
                       <View
                         key={item.id ?? `${rx.id}-${item.medicine_name}-${idx}`}
-                        className="rounded-input border border-border bg-bg p-3">
+                        className="rounded-input border border-border bg-bg p-3"
+                      >
                         <Text weight="bold">{item.medicine_name}</Text>
                         <Text variant="caption" tone="muted" className="mt-1">
-                          {[item.dosage, item.frequency, item.duration].filter(Boolean).join(' · ') || 'Chưa ghi liều dùng'}
+                          {[item.dosage, item.frequency, item.duration].filter(Boolean).join(' · ') ||
+                            'Chưa ghi liều dùng'}
                         </Text>
                         {item.instruction && (
                           <Text variant="caption" className="mt-1">
@@ -275,6 +288,20 @@ export function PrescriptionsScreen() {
           </Card>
         )}
       </View>
+      <ConfirmDialog
+        visible={nextRecordId !== null}
+        title="Đổi bệnh án?"
+        description="Đổi bệnh án sẽ xóa nội dung đang nhập."
+        confirmLabel="Đổi bệnh án"
+        cancelLabel="Tiếp tục nhập"
+        onCancel={() => setNextRecordId(null)}
+        onConfirm={() => {
+          if (nextRecordId === null) return;
+          form.reset({ note: '', items: [{ ...EMPTY_ITEM }] });
+          setRecordId(nextRecordId);
+          setNextRecordId(null);
+        }}
+      />
     </Screen>
   );
 }

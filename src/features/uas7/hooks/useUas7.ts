@@ -27,7 +27,7 @@ export function useCreateUas7Score() {
     mutationFn: (payload: CreateUas7Payload) => uas7Api.createScore(payload),
     onSuccess: () => {
       toast.success('Đã ghi nhận điểm UAS7 hôm nay.');
-      void queryClient.invalidateQueries({ queryKey: ['uas7'] });
+      return queryClient.invalidateQueries({ queryKey: ['uas7'] });
     },
   });
 }

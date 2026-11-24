@@ -17,14 +17,14 @@ export type ScreenTitleProps = {
 /** Tiêu đề lớn của màn hình gốc trong tab (không có nút quay lại). */
 export function ScreenTitle({ title, eyebrow, right, className }: ScreenTitleProps) {
   return (
-    <View className={cn('flex-row items-end gap-3 pb-4 pt-3', className)}>
-      <View className="flex-1">
+    <View className={cn('flex-row items-end gap-2 pb-3 pt-2 roomy:gap-3 roomy:pb-4 roomy:pt-3', className)}>
+      <View className="min-w-0 flex-1">
         {eyebrow && (
           <Text variant="caption" tone="muted" numberOfLines={1}>
             {eyebrow}
           </Text>
         )}
-        <Text variant="h1" numberOfLines={1} accessibilityRole="header" className={eyebrow ? 'mt-0.5' : undefined}>
+        <Text variant="h1" numberOfLines={2} accessibilityRole="header" className={eyebrow ? 'mt-0.5' : undefined}>
           {title}
         </Text>
       </View>

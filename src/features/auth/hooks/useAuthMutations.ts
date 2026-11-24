@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query';
 import { session } from '@/core/auth';
 
 import { authApi } from '../api/auth-api';
+import { logout } from '../api/logout';
 import type { ChangePasswordRequest, LoginRequest, ResetPasswordRequest, SignupRequest } from '../types';
 
 // Màn hình tự xử lý lỗi (`meta.silent`) để hiện lỗi ngay dưới ô nhập — xem `applyFieldErrors`.
@@ -42,16 +43,7 @@ export function useChangePassword() {
   });
 }
 
-/** Đăng xuất: báo server (lỗi cũng bỏ qua) rồi luôn xóa phiên cục bộ. */
+/** Đóng phiên cục bộ ngay; báo máy chủ nếu còn kết nối. */
 export function useLogout() {
-  return useMutation({
-    mutationFn: async () => {
-      try {
-        await authApi.logout();
-      } finally {
-        await session.signOut();
-      }
-    },
-    meta: { silent: true },
-  });
+  return useMutation({ mutationFn: logout });
 }

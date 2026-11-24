@@ -20,7 +20,7 @@ export function useCreatePrescription(recordId: number | null) {
     mutationFn: (payload: CreatePrescriptionPayload) => prescriptionsApi.create(payload),
     onSuccess: () => {
       toast.success('Đã lưu đơn thuốc cho bệnh nhân.');
-      void queryClient.invalidateQueries({ queryKey: ['prescriptions', 'by-record', recordId] });
+      return queryClient.invalidateQueries({ queryKey: ['prescriptions', 'by-record', recordId] });
     },
   });
 }

@@ -36,7 +36,7 @@ function EditForm({ user, isSelf }: { user: UserDetail; isSelf: boolean }) {
 
   return (
     <Screen
-      header={<AppHeader title="Sửa người dùng" onBack={router.back} />}
+      header={<AppHeader title="Sửa người dùng" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}
       footer={<Button title="Lưu thay đổi" fullWidth loading={edit.isPending} onPress={() => submit()} />}>
       <View className="gap-[18px] pb-4">
         <FormField
@@ -90,7 +90,7 @@ export function UserEditScreen() {
   const { data: user, isLoading, error, refetch } = useUser(id);
   if (user) return <EditForm user={user} isSelf={auth.status === 'signedIn' && auth.user.user_id === id} />;
   return (
-    <Screen header={<AppHeader title="Sửa người dùng" onBack={router.back} />}>
+    <Screen header={<AppHeader title="Sửa người dùng" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}>
       {isLoading ? <Spinner fill /> : <ErrorState fill description={getErrorMessage(error)} onRetry={() => refetch()} />}
     </Screen>
   );

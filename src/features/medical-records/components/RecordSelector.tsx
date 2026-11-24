@@ -18,6 +18,7 @@ export type RecordSelectorProps = {
   initialRecordId?: number | null;
   label?: string;
   preferActive?: boolean;
+  disabled?: boolean;
 };
 
 /**
@@ -30,6 +31,7 @@ export function RecordSelector({
   initialRecordId,
   label = 'Hồ sơ bệnh án',
   preferActive = false,
+  disabled,
 }: RecordSelectorProps) {
   const auth = useSession();
   const user = auth.status === 'signedIn' ? auth.user : null;
@@ -109,12 +111,14 @@ export function RecordSelector({
         options={options}
         value={value}
         onChange={onChange}
+        disabled={disabled}
       />
       {query.hasNextPage && (
         <Button
           title="Tải thêm bệnh án để chọn"
           variant="ghost"
           loading={query.isFetchingNextPage}
+          disabled={disabled}
           onPress={() => {
             void query.fetchNextPage();
           }}

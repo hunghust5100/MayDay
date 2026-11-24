@@ -47,10 +47,9 @@ export function SignupScreen() {
   return (
     <AuthScaffold
       title="Tạo tài khoản"
-      subtitle="Đăng ký để khai báo bệnh án và theo dõi mề đay hằng ngày."
       onBack={() => backToLogin()}
       footer={<TextLink prompt="Đã có tài khoản?" label="Đăng nhập" onPress={() => backToLogin()} />}>
-      <View className="gap-[18px]">
+      <View className="gap-3 roomy:gap-[18px]">
         <FormField
           control={form.control}
           name="full_name"
@@ -82,7 +81,7 @@ export function SignupScreen() {
           control={form.control}
           name="confirm_password"
           render={(field) => (
-            <PasswordField label="Nhập lại mật khẩu" required leftIcon={Lock} placeholder="Nhập lại mật khẩu" autoComplete="new-password" {...field} />
+            <PasswordField label="Nhập lại mật khẩu" required leftIcon={Lock} autoComplete="new-password" {...field} />
           )}
         />
         <FormField

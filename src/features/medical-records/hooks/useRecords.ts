@@ -3,9 +3,10 @@ import { usePaginatedQuery } from '@/core/api';
 import type { AnswerInput } from '@/features/dynamic-form';
 import { recordsApi } from '../api/records-api';
 import type { RecordFilters } from '../types';
-export function useRecords(filters: RecordFilters, patientId?: number) {
+export function useRecords(filters: RecordFilters, patientId?: number, enabled = true) {
   return usePaginatedQuery({
     queryKey: ['medical-records', 'list', patientId ?? 'all', filters],
+    enabled,
     queryFn: ({ page, limit, signal }) =>
       patientId
         ? recordsApi.history(patientId, page, limit, filters.status, signal)

@@ -98,14 +98,14 @@ export function MedicalRecordCreateScreen() {
     }
   };
   return (
-    <Screen header={<AppHeader title="Khai báo bệnh án" onBack={router.back} />}>
+    <Screen header={<AppHeader title="Khai báo bệnh án" onBack={() => router.canGoBack() ? router.back() : router.replace('/')} />}>
       {!allowed ? (
         <EmptyState
           title="Không thể tạo bệnh án"
           description="Chọn bệnh nhân từ danh sách và kiểm tra quyền tài khoản."
         />
       ) : (
-        <View className="gap-4">
+        <View className="gap-3 roomy:gap-4">
           {!classify.data ? (
             <>
               {questions.isLoading ? (

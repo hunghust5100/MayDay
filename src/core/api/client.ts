@@ -1,3 +1,4 @@
+import { CancelledError, onlineManager } from '@tanstack/react-query';
 import { Platform } from 'react-native';
 
 import { session } from '@/core/auth';
@@ -21,6 +22,8 @@ export type RequestOptions = {
   signal?: AbortSignal;
   /** Gắn header Authorization (mặc định có). Tắt cho login/signup/forgot-password. */
   auth?: boolean;
+  /** JWT của phiên vừa đóng, dùng để báo đăng xuất mà không ảnh hưởng phiên mới. */
+  logoutToken?: string;
   timeout?: number;
 };
 
@@ -59,11 +62,12 @@ async function handleSessionExpired(error: ApiError) {
 }
 
 async function request<T>(method: string, path: string, options: RequestOptions = {}): Promise<BaseResponse<T>> {
-  const { query, body, formData, signal, auth = true, timeout = env.apiTimeout } = options;
+  if (!onlineManager.isOnline()) throw new ApiError('NETWORK');
+  const { query, body, formData, signal, auth = true, logoutToken, timeout = env.apiTimeout } = options;
 
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (body !== undefined) headers['Content-Type'] = 'application/json';
-  const token = auth ? session.getToken() : null;
+  const token = logoutToken ?? (auth ? session.getToken() : null);
   if (token) headers.Authorization = `Bearer ${token}`;
 
   // Gộp tín hiệu hủy từ bên ngoài với timeout (Hermes chưa có AbortSignal.any).
@@ -99,11 +103,14 @@ async function request<T>(method: string, path: string, options: RequestOptions 
   } catch {
     throw new ApiError(response.ok ? 'BAD_RESPONSE' : '9901', { httpStatus: response.status });
   }
+  if (!logoutToken && token && token !== session.getToken()) throw new CancelledError({ silent: true });
   if (!json || typeof json.code !== 'string') throw new ApiError('BAD_RESPONSE', { httpStatus: response.status });
 
   if (!SUCCESS_CODES.has(json.code)) {
     const error = new ApiError(json.code, { serverMessage: json.message, httpStatus: response.status });
-    if (token && SESSION_EXPIRED_CODES.has(json.code)) await handleSessionExpired(error);
+    if (!logoutToken && token && token === session.getToken() && SESSION_EXPIRED_CODES.has(json.code)) {
+      await handleSessionExpired(error);
+    }
     throw error;
   }
   return json;

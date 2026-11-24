@@ -65,16 +65,16 @@ export function PatientCreateScreen() {
   );
   if (!user || !canCreatePatient(user.role_id))
     return (
-      <Screen header={<AppHeader title="Thêm bệnh nhân" onBack={router.back} />}>
+      <Screen header={<AppHeader title="Thêm bệnh nhân" onBack={() => router.canGoBack() ? router.back() : router.replace('/doctor/patients')} />}>
         <EmptyState title="Bạn không có quyền tạo bệnh nhân" />
       </Screen>
     );
   return (
     <Screen
-      header={<AppHeader title="Thêm bệnh nhân" onBack={router.back} />}
+      header={<AppHeader title="Thêm bệnh nhân" onBack={() => router.canGoBack() ? router.back() : router.replace('/doctor/patients')} />}
       footer={<Button title="Tạo bệnh nhân" loading={create.isPending} fullWidth onPress={() => submit()} />}
     >
-      <View className="gap-4">
+      <View className="gap-3 roomy:gap-4">
         <Text variant="h3">Thông tin tài khoản</Text>
         <FormField
           control={form.control}

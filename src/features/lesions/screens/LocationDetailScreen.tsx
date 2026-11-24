@@ -28,6 +28,10 @@ import type { LesionPhoto, LocationInput, PhotoInput } from '../types';
 export function LocationDetailScreen() {
   const { episodeId, locationId } = useLocalSearchParams<{ episodeId: string; locationId: string }>();
   const router = useRouter();
+  const back = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace({ pathname: '/patient/lesions/[episodeId]', params: { episodeId } });
+  };
   const episode = useEpisode(episodeId ?? '');
   const locations = useLocations(episodeId ?? '');
   const photos = useLesionPhotos(locationId ?? '');
@@ -53,7 +57,7 @@ export function LocationDetailScreen() {
   const rows = photos.data ?? [];
   return (
     <Screen
-      header={<AppHeader title={location?.body_part ?? 'Vị trí tổn thương'} onBack={router.back} />}
+      header={<AppHeader title="Vị trí tổn thương" onBack={back} />}
       refreshControl={
         <RefreshControl
           refreshing={photos.isRefetching || locations.isRefetching}
@@ -77,9 +81,10 @@ export function LocationDetailScreen() {
       ) : !location || !episode.data ? (
         <EmptyState title="Không tìm thấy vị trí trong đợt này" />
       ) : (
-        <View className="gap-4">
+        <View className="gap-3 roomy:gap-4">
           <Card className="gap-2">
-            <Text variant="h3">{episode.data.name}</Text>
+            <Text variant="h2" accessibilityRole="header">{location.body_part}</Text>
+            <Text tone="muted">{episode.data.name}</Text>
             <InfoRow
               label="Xuất hiện"
               value={location.occurred_at ? formatDateTime(location.occurred_at) : null}
@@ -279,11 +284,11 @@ export function LocationDetailScreen() {
           if (confirm)
             remove.mutate(confirm, {
               onSuccess: () => {
-                const back = confirm.kind === 'location';
+                const removedLocation = confirm.kind === 'location';
                 setConfirm(null);
                 setViewer(null);
                 toast.success('Đã xóa bản ghi theo dõi.');
-                if (back) router.back();
+                if (removedLocation) back();
               },
             });
         }}

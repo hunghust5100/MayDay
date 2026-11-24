@@ -54,7 +54,8 @@ export function PasswordField(props: Omit<TextFieldProps, 'secureTextEntry' | 'r
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={visible ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-          hitSlop={10}
+          disabled={props.disabled}
+          className="-mr-2 h-[44px] w-[44px] items-center justify-center"
           onPress={() => setVisible((v) => !v)}>
           <Icon as={visible ? EyeOff : Eye} size={20} color="muted" />
         </Pressable>

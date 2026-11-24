@@ -19,18 +19,25 @@ export type IconTileTone = keyof typeof TONES;
 export type IconTileProps = Omit<PressableProps, 'children'> & {
   icon: LucideIcon;
   tone?: IconTileTone;
+  size?: 'sm' | 'md';
   /** Nhãn dưới ô (tối đa 2 dòng). */
   label?: string;
   className?: string;
 };
 
 /** Ô icon màu 58×58 — dùng cho lối tắt truy cập nhanh. */
-export function IconTile({ icon, tone = 'teal', label, className, ...props }: IconTileProps) {
+export function IconTile({ icon, tone = 'teal', size = 'md', label, className, ...props }: IconTileProps) {
   const { bg, fg } = TONES[tone];
   const content = (
     <>
-      <View className="h-[58px] w-[58px] items-center justify-center rounded-tile" style={{ backgroundColor: bg }}>
-        <Icon as={icon} size={24} color={fg} />
+      <View
+        className={cn(
+          'items-center justify-center rounded-tile',
+          size === 'sm' ? 'h-9 w-9' : 'h-[58px] w-[58px]',
+        )}
+        style={{ backgroundColor: bg }}
+      >
+        <Icon as={icon} size={size === 'sm' ? 18 : 24} color={fg} />
       </View>
       {label && (
         <Text variant="tiny" weight="semibold" align="center" numberOfLines={2}>
@@ -44,7 +51,11 @@ export function IconTile({ icon, tone = 'teal', label, className, ...props }: Ic
   if (!props.onPress) return <View className={cn('items-center gap-2', className)}>{content}</View>;
 
   return (
-    <Pressable accessibilityRole="button" className={cn('items-center gap-2 active:opacity-75', className)} {...props}>
+    <Pressable
+      accessibilityRole="button"
+      className={cn('items-center gap-2 active:opacity-75', className)}
+      {...props}
+    >
       {content}
     </Pressable>
   );

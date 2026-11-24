@@ -49,7 +49,7 @@ export function TemplateForm({ initial, loading, errorMessage, duplicateCode, on
       )} />
       <FormField control={form.control} name="is_active" render={({ value, onChange }) => (
         <SwitchField value={value === 1} onChange={(checked) => onChange(checked ? 1 : 0)} disabled={loading}
-          label="Đang hoạt động" description="Chỉ mẫu đang hoạt động mới được dùng để tạo bệnh án mới. Bệnh án cũ vẫn được giữ lại." />
+          label="Đang hoạt động" description="Cho phép chọn mẫu này khi tạo bệnh án." />
       )} />
       {errorMessage && <Text tone="danger" accessibilityRole="alert">{errorMessage}</Text>}
       <Button title={initial ? 'Lưu thay đổi' : 'Tạo mẫu phiếu'} fullWidth loading={loading} onPress={() => submit()} />

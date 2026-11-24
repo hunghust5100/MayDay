@@ -14,8 +14,8 @@ export type SectionHeaderProps = {
 
 export function SectionHeader({ title, actionLabel, onAction, className }: SectionHeaderProps) {
   return (
-    <View className={cn('mb-2.5 mt-5 flex-row items-center justify-between', className)}>
-      <Text variant="h2" accessibilityRole="header">
+    <View className={cn('mb-2 mt-3 flex-row flex-wrap items-center justify-between gap-2 roomy:mb-2.5 roomy:mt-5', className)}>
+      <Text variant="h2" accessibilityRole="header" className="shrink">
         {title}
       </Text>
       {actionLabel && onAction && (

@@ -19,7 +19,8 @@ export const authApi = {
   login: (body: LoginRequest) => api.post<LoginResponse>('/auth/login', body, { auth: false }),
 
   /** auth03 — Đăng xuất: blacklist token hiện tại trên server. */
-  logout: (fcmToken?: string) => api.post<Empty>('/auth/logout', fcmToken ? { fcm_token: fcmToken } : {}),
+  logout: (logoutToken: string, fcmToken?: string) =>
+    api.post<Empty>('/auth/logout', fcmToken ? { fcm_token: fcmToken } : {}, { logoutToken, timeout: 3000 }),
 
   /** auth04 — Gửi OTP đặt lại mật khẩu qua SMS. */
   forgotPassword: (phone: string) => api.post<Empty>('/auth/forgot-password', { phone }, { auth: false }),

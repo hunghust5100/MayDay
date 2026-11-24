@@ -30,7 +30,7 @@ export function FacilitiesScreen() {
           );
   return (
     <Screen header={<ScreenTitle title="Cơ sở" eyebrow="Chi nhánh · Khoa · Phòng khám" />}>
-      <View className="gap-4">
+      <View className="gap-3 roomy:gap-4">
         <SegmentedControl
           options={(Object.keys(facilityLabels) as FacilityKind[]).map((value) => ({
             value,

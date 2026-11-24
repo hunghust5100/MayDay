@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from 'expo-router';
+import { Redirect, useLocalSearchParams } from 'expo-router';
 import { Lock } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
 import { View } from 'react-native';
@@ -6,7 +6,7 @@ import { View } from 'react-native';
 import { applyFieldErrors } from '@/core/api';
 import { FormField, OtpInput, PasswordField, useZodForm } from '@/shared/form';
 import { Button, Text, toast } from '@/shared/ui';
-import { formatPhone } from '@/shared/utils';
+import { formatPhone, isValidPhone } from '@/shared/utils';
 
 import { AuthScaffold } from '../components/AuthScaffold';
 import { TextLink } from '../components/TextLink';
@@ -34,6 +34,8 @@ export function ResetPasswordScreen() {
   }, [cooldown]);
 
   const resendOtp = () =>
+    !resend.isPending &&
+    !reset.isPending &&
     resend.mutate(phone, {
       onSuccess: () => {
         setCooldown(RESEND_SECONDS);
@@ -60,13 +62,16 @@ export function ResetPasswordScreen() {
     ),
   );
 
+  if (!isValidPhone(phone)) return <Redirect href="/forgot-password" />;
+
   return (
     <AuthScaffold
       title="Đặt lại mật khẩu"
       subtitle={`Nhập mã OTP gồm 6 chữ số vừa được gửi tới ${formatPhone(phone)}.`}
       onBack={() => backToLogin()}
-      footer={<TextLink label="Quay lại đăng nhập" onPress={() => backToLogin()} />}>
-      <View className="gap-[18px]">
+      footer={<TextLink label="Quay lại đăng nhập" onPress={() => backToLogin()} />}
+    >
+      <View className="gap-3 roomy:gap-[18px]">
         <FormField
           control={form.control}
           name="otp"
@@ -85,17 +90,34 @@ export function ResetPasswordScreen() {
           control={form.control}
           name="new_password"
           render={(field) => (
-            <PasswordField label="Mật khẩu mới" leftIcon={Lock} placeholder="Tối thiểu 6 ký tự" autoComplete="new-password" {...field} />
+            <PasswordField
+              label="Mật khẩu mới"
+              leftIcon={Lock}
+              placeholder="Tối thiểu 6 ký tự"
+              autoComplete="new-password"
+              {...field}
+            />
           )}
         />
         <FormField
           control={form.control}
           name="confirm_password"
           render={(field) => (
-            <PasswordField label="Nhập lại mật khẩu mới" leftIcon={Lock} placeholder="Nhập lại mật khẩu mới" autoComplete="new-password" {...field} />
+            <PasswordField
+              label="Nhập lại mật khẩu mới"
+              leftIcon={Lock}
+              autoComplete="new-password"
+              {...field}
+            />
           )}
         />
-        <Button title="Đặt lại mật khẩu" fullWidth loading={reset.isPending} onPress={() => submit()} />
+        <Button
+          title="Đặt lại mật khẩu"
+          fullWidth
+          loading={reset.isPending}
+          disabled={resend.isPending}
+          onPress={() => submit()}
+        />
       </View>
     </AuthScaffold>
   );

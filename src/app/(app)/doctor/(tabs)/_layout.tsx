@@ -1,12 +1,16 @@
 import { Tabs } from 'expo-router/tabs';
 import { Bell, ClipboardList, LayoutDashboard, UserRound, UsersRound } from 'lucide-react-native';
 
-import { TabBar } from '@/shared/ui';
+import { TabBar, TabScene } from '@/shared/ui';
 
 /** Thanh tab dưới đáy — Nhân viên y tế. */
 export default function DoctorTabsLayout() {
   return (
-    <Tabs tabBar={(props) => <TabBar {...props} />} screenOptions={{ headerShown: false }}>
+    <Tabs
+      tabBar={(props) => <TabBar {...props} />}
+      screenLayout={({ children }) => <TabScene>{children}</TabScene>}
+      screenOptions={{ headerShown: false }}
+    >
       <Tabs.Screen
         name="index"
         options={{ title: 'Tổng quan', tabBarIcon: ({ color }) => <LayoutDashboard color={color} size={24} /> }}

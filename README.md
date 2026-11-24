@@ -136,7 +136,7 @@ src/
 │   ├── auth/                 # Phiên đăng nhập, token, chặn route theo vai trò
 │   ├── config/               # Biến môi trường, cấu hình
 │   ├── storage/              # Secure storage, cache cục bộ
-│   ├── notifications/        # Vị trí dành cho hạ tầng push (chưa tích hợp FCM native)
+│   ├── notifications/        # Quyền thông báo và FCM token trên Android/iOS
 │   └── providers/            # Gộp các Provider gốc
 │
 ├── shared/                   # Code dùng chung, không phụ thuộc nghiệp vụ
@@ -316,3 +316,67 @@ Triển khai theo SLIDE8, SLIDE9; tham khảo luồng và mô hình trong `aistu
 **Điểm tối ưu:** kho ảnh dùng FlatList để giới hạn số ô render, giới hạn chiều rộng trên web lớn, upload có thể thu gọn, chạm ảnh mở ngay thông tin/xem/xóa; lỗi điểm số dùng tiếng Việt. Đọc trạng thái bệnh án cho màn tổn thương không tải thêm toàn bộ câu trả lời/tóm tắt. Bộ chọn bệnh án tải thêm theo trang và ưu tiên bệnh án còn hoạt động ở màn theo dõi. Thông tin batch upload được chụp lúc bắt đầu; giữ các ảnh tải thành công khi thử lại. Media không import ngược feature bệnh án để tránh vòng phụ thuộc runtime.
 
 **Cách thử nhanh:** đăng nhập bệnh nhân `0912345678` / `123456`, vào Ghi nhận tổn thương, chọn bệnh án đang chờ/đang khám, tạo đợt và vị trí rồi thêm ảnh. Tải ảnh lên và bấm Xong để quay lại form, nhập điểm và Ghi nhận ảnh tiến triển. Vào Kho ảnh để tìm, xem hoặc quản lý tệp gốc. Dùng nút quay lại trong app để giữ dữ liệu mock; tải lại trang sẽ reset seed. Quyền upload mock dựa trên grant `upload_images`; UI dùng quy ước vai trò seed và backend vẫn quyết định quyền cuối cùng.
+
+## 9. Demo trên thiết bị, ngoại tuyến và thông báo đẩy
+
+### Bản cài cho Android và iPhone
+
+Liên kết repo với dự án EAS của nhóm bằng `npx eas-cli@latest init`. Với iPhone, dùng tài khoản Apple Developer của nhóm và đăng ký iPhone chấm bài bằng `npx eas-cli@latest device:create` trước khi tạo bản cài nội bộ. Profile `preview` nhúng bundle và bật mock, nên phiên demo không phụ thuộc Metro hay backend. Android nhận APK, iPhone nhận liên kết cài của EAS cho thiết bị đã đăng ký.
+
+```sh
+npx eas-cli@latest build --profile preview --platform all
+```
+
+### Luồng kiểm tra ngoại tuyến
+
+1. Đăng nhập với số sai định dạng, số chưa đăng ký và mật khẩu sai để xem phản hồi tại ô tương ứng. Sau đó đăng nhập bằng tài khoản demo `0912345678` / `123456` và giữ tùy chọn **Ghi nhớ đăng nhập**.
+2. Mở **Hồ sơ cá nhân**, tab **Bệnh án** và tab **Thông báo** khi có mạng. Bật chế độ máy bay, tắt cả Wi-Fi nếu máy vẫn giữ kết nối, đóng hẳn app rồi mở lại. Các màn đã tải hiện dữ liệu và dải báo ngoại tuyến. Các thao tác gửi dữ liệu báo lỗi kết nối ngay. Đơn thuốc, ảnh và chi tiết câu trả lời bệnh án không nằm trong cache lưu qua lần mở app.
+3. Vẫn ở chế độ máy bay, vào **Tài khoản → Đăng xuất**. Mở lại app để kiểm tra phiên đã được xóa. Bật mạng, đăng nhập tài khoản khác và kiểm tra dữ liệu tài khoản trước không xuất hiện.
+4. Cache qua lần mở app chỉ lưu trên iOS/Android, tối đa 24 giờ cho mỗi kết quả. Cache gắn với phiên và môi trường API, mã hóa AES-GCM với khóa trong Keychain/Keystore, và xóa khi đóng phiên. Web dùng cache trong phiên đang mở. Khi có mạng trở lại, app làm mới các truy vấn cũ đang mở.
+
+### Push FCM với backend của nhóm
+
+#### 1. Firebase, Apple Developer và backend thử nghiệm
+
+- **Android.** Thêm Android app vào dự án Firebase của nhóm rồi tải `google-services.json`. Package phải khớp `MAYDAY_ANDROID_PACKAGE`, mặc định `vn.drmayday.app`. Dùng điện thoại có Google Play services.
+- **iPhone.** Thêm iOS app vào cùng dự án Firebase rồi tải `GoogleService-Info.plist`. Bundle ID phải khớp `MAYDAY_IOS_BUNDLE_ID`, mặc định `vn.drmayday.app`. Trong Apple Developer, bật **Push Notifications** cho App ID. Tạo hoặc dùng khóa APNs của nhóm, rồi tải file `.p8` cùng **Key ID** và **Team ID** vào **Firebase → Project settings → Cloud Messaging → Apple app configuration**. Bản cài nội bộ EAS ký ad hoc dùng `aps-environment=production`.
+- **Backend.** Dùng máy chủ thử nghiệm mà hai điện thoại đều truy cập được qua HTTPS, với tài khoản bệnh nhân đã tạo trên backend đó. Cấu hình Firebase Admin SDK hoặc FCM HTTP v1 để gửi từ cùng dự án Firebase. Khóa gửi FCM chỉ nằm trên máy chủ. Khóa APNs `.p8` dùng trong Firebase Console. Hai file cấu hình app ở trên dùng cho build.
+
+#### 2. Tạo bản cài EAS
+
+Liên kết với **dự án EAS của nhóm**. Chạy `init` nếu repo chưa liên kết. Mở URL do `device:create` trả về trên chính iPhone cần test và hoàn tất đăng ký UDID trước khi build.
+
+```sh
+npx eas-cli@latest login
+npx eas-cli@latest init
+npx eas-cli@latest device:create
+```
+
+Trong **Expo dashboard → Project → Environment variables**, chọn môi trường **production** mà profile `integration` sử dụng, rồi khai báo:
+
+| Tên biến | Loại | Giá trị |
+| --- | --- | --- |
+| `EXPO_PUBLIC_API_URL` | String, plain text hoặc sensitive | URL HTTPS của backend thử nghiệm, gồm `/api/v1` |
+| `MAYDAY_GOOGLE_SERVICES_JSON` | File | Tải lên `google-services.json` cho bản Android |
+| `MAYDAY_GOOGLE_SERVICE_INFO_PLIST` | File | Tải lên `GoogleService-Info.plist` cho bản iOS |
+| `MAYDAY_ANDROID_PACKAGE`, `MAYDAY_IOS_BUNDLE_ID` | String, plain text hoặc sensitive | Điền nếu Firebase của nhóm dùng ID khác mặc định |
+
+`integration` tự bật FCM và dùng API thật. `preview` dùng mock để demo các luồng khác. Mỗi build chỉ cần file Firebase của nền tảng đang build.
+
+```sh
+npx eas-cli@latest build --profile integration --platform android
+npx eas-cli@latest build --profile integration --platform ios
+```
+
+Mở link cài APK trên Android và link cài nội bộ trên iPhone đã đăng ký. Bản cài này có bundle sẵn và chạy độc lập với Metro.
+
+#### 3. Kiểm thử từ thiết bị đến backend
+
+1. Đăng nhập cùng một bệnh nhân thử trên cả hai máy. Mở **Thông báo → Bật thông báo trên thiết bị** và cấp quyền nếu hệ điều hành hỏi. Nếu quyền đã được cấp, app tự đăng ký. Khi API trả thành công, màn hình hiện **Thông báo thiết bị đang bật**. Backend phải lưu được hai FCM token riêng cho cùng tài khoản, với `device_type` tương ứng là `android` và `ios`.
+2. Để kiểm tra riêng đường truyền push, lấy FCM token của thiết bị thử từ bản ghi đăng ký trên backend. Đưa app ra nền, mở **Firebase Console → Messaging → Send test message**, nhập token và gửi nội dung chung như “Bạn có thông báo mới”. Thử riêng từng máy. Firebase Console chỉ kiểm tra đường truyền FCM, nên lần thử này không tạo bản ghi trong hộp thư.
+3. Để kiểm tra trọn luồng MayDay, dùng tài khoản bác sĩ thử tạo đơn thuốc hoặc cập nhật kết quả xét nghiệm cho bệnh nhân đó. Backend tạo bản ghi hộp thư và gửi FCM có trường `notification` với tiêu đề/nội dung chung. Khi app đang mở, kiểm tra thông báo trong app và hộp thư được làm mới. Khi app ở nền hoặc đã đóng, kiểm tra thông báo hệ thống và chạm để mở hộp thư. Mở app lại trước khi thử nếu đã **Force stop** từ cài đặt hệ thống.
+4. Đăng xuất trên một máy khi có mạng. Kiểm tra backend gỡ token của máy đó và máy còn lại tiếp tục nhận. Khi đăng xuất ngoại tuyến, app đóng phiên trên máy ngay và yêu cầu Firebase thu hồi token cũ khi có mạng trở lại. Nội dung trên màn hình khóa nên là thông báo chung. Chi tiết y tế nằm trong hộp thư có xác thực.
+
+Nếu màn hình báo thử lại, kiểm tra quyền thông báo, URL backend và phản hồi của `POST /api/v1/notifications/register_token`. Nếu chỉ iPhone không nhận, đối chiếu bundle ID, APNs key và provisioning profile. Nếu FCM trả `SENDER_ID_MISMATCH`, kiểm tra dự án Firebase của bản cài và của server gửi. Nếu trả `UNREGISTERED`, kiểm tra token mới và loại token cũ khỏi danh sách gửi.
+
+Tài liệu tích hợp: [EAS Internal Distribution](https://docs.expo.dev/build/internal-distribution/), [Biến môi trường EAS](https://docs.expo.dev/eas/environment-variables/usage/), [FCM cho Apple](https://firebase.google.com/docs/cloud-messaging/ios/get-started), [FCM HTTP v1](https://firebase.google.com/docs/cloud-messaging/send/v1-api).

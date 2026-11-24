@@ -53,7 +53,7 @@ export function StaffCreateScreen() {
 
   return (
     <Screen
-      header={<AppHeader title="Thêm nhân viên y tế" onBack={router.back} />}
+      header={<AppHeader title="Thêm nhân viên y tế" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}
       footer={<Button title="Tạo tài khoản nhân viên" fullWidth loading={create.isPending} onPress={() => submit()} />}>
       <View className="gap-[18px] pb-4">
         <Text variant="h3">Tài khoản</Text>

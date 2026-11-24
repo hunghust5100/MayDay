@@ -52,7 +52,7 @@ export function TemplatePreview({ template, onClose }: { template: TemplateDetai
   };
   return <Screen header={<AppHeader title="Xem thử mẫu phiếu" onBack={onClose} />} contentClassName="gap-4">
     <Text variant="h2">{template.name}</Text>
-    <Text tone="muted">Đây là bản xem thử, không tạo bệnh án. Câu trả lời và ảnh sẽ mất khi bạn rời màn hình.</Text>
+    <Text tone="muted">Câu trả lời và ảnh thử không được lưu.</Text>
     <Button title="Xóa câu trả lời thử" variant="outline" onPress={() => { setAnswers({}); setImages({}); setChecked(false); setResetKey((v) => v + 1); }} />
     {!template.sections.length && <Text tone="muted">Mẫu chưa có nội dung để xem thử.</Text>}
     {byOrder(template.sections).map((section) => <Card key={section.section_id} className="gap-3">

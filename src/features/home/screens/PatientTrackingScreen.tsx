@@ -14,7 +14,7 @@ function TrackingCard({
   icon: LucideIcon;
   tone: IconTileTone;
   title: string;
-  description: string;
+  description?: string;
   onPress: () => void;
 }) {
   return (
@@ -22,9 +22,7 @@ function TrackingCard({
       <IconTile icon={icon} tone={tone} />
       <View className="flex-1 gap-1">
         <Text variant="h3">{title}</Text>
-        <Text variant="caption" tone="muted">
-          {description}
-        </Text>
+        {description && <Text variant="caption" tone="muted">{description}</Text>}
       </View>
       <Icon as={ChevronRight} size={20} color="subtle" />
     </Card>
@@ -41,21 +39,20 @@ export function PatientTrackingScreen() {
           icon={Activity}
           tone="teal"
           title="Chấm điểm UAS7"
-          description="Chấm điểm ngứa và nốt sẩn mỗi ngày, xem biểu đồ 7 ngày"
+          description="Ghi điểm hằng ngày"
           onPress={() => router.push('/patient/uas7')}
         />
         <TrackingCard
           icon={ScanFace}
           tone="rose"
           title="Theo dõi tổn thương da"
-          description="Ghi nhận đợt bùng phát, vị trí và ảnh tiến triển"
+          description="Ghi đợt, vị trí và ảnh"
           onPress={() => router.push('/patient/lesions')}
         />
         <TrackingCard
           icon={Images}
           tone="indigo"
           title="Kho ảnh"
-          description="Ảnh tổn thương đã tải lên"
           onPress={() => router.push('/patient/media')}
         />
       </View>

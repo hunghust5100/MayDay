@@ -34,9 +34,9 @@ export type PaginatedListProps<T> = Omit<
   emptyTitle?: string;
   emptyDescription?: string;
   emptyIcon?: LucideIcon;
-  /** Padding ngang 20px như Screen (mặc định có). */
+  /** Lề ngang theo chiều rộng màn hình (mặc định có). */
   padded?: boolean;
-  /** Khoảng cách giữa các item (class gap, mặc định `gap-3`). */
+  /** Khoảng cách giữa các item (có thể thay bằng class gap riêng). */
   gapClassName?: string;
 };
 
@@ -62,7 +62,7 @@ export function PaginatedList<T>({
   emptyDescription,
   emptyIcon,
   padded = true,
-  gapClassName = 'gap-3',
+  gapClassName = 'gap-2 roomy:gap-3',
   contentContainerClassName,
   ...props
 }: PaginatedListProps<T> & { contentContainerClassName?: string }) {
@@ -76,7 +76,7 @@ export function PaginatedList<T>({
   return (
     <FlatList
       data={data}
-      contentContainerClassName={cn('grow pb-6', padded && 'px-5', !isEmpty && gapClassName, contentContainerClassName)}
+      contentContainerClassName={cn('grow pb-4 roomy:pb-6', padded && 'px-3 roomy:px-5', !isEmpty && gapClassName, contentContainerClassName)}
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
       onEndReachedThreshold={0.4}

@@ -32,7 +32,7 @@ export function RoleCreateScreen() {
 
   return (
     <Screen
-      header={<AppHeader title="Thêm vai trò" onBack={router.back} />}
+      header={<AppHeader title="Thêm vai trò" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/rbac')} />}
       footer={<Button title="Tạo vai trò" fullWidth loading={create.isPending} onPress={() => submit()} />}>
       <View className="gap-[18px]">
         <FormField
@@ -49,7 +49,7 @@ export function RoleCreateScreen() {
               required
               leftIcon={Tag}
               placeholder="VD: intern_doctor"
-              hint="Duy nhất trong hệ thống, dùng trong cấu hình phân quyền"
+              hint="Mã vai trò phải là duy nhất."
               autoCapitalize="none"
               autoCorrect={false}
               {...field}

@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Pressable, View, useWindowDimensions } from 'react-native';
 
 import { Text } from '@/shared/ui';
 import { cn } from '@/shared/utils';
@@ -18,10 +18,11 @@ type OptionCardProps = {
   checked: boolean;
   multiple: boolean;
   invalid: boolean;
+  compact?: boolean;
   onPress: () => void;
 };
 
-function OptionCard({ option, checked, multiple, invalid, onPress }: OptionCardProps) {
+function OptionCard({ option, checked, multiple, invalid, compact = false, onPress }: OptionCardProps) {
   return (
     <Pressable
       accessibilityRole={multiple ? 'checkbox' : 'radio'}
@@ -29,14 +30,22 @@ function OptionCard({ option, checked, multiple, invalid, onPress }: OptionCardP
       disabled={option.disabled}
       onPress={onPress}
       className={cn(
-        'min-h-14 flex-row items-center gap-3 rounded-input border-[1.5px] border-border bg-surface px-4 py-3 active:opacity-80',
+        'min-h-[48px] items-center roomy:min-h-14 rounded-input border-[1.5px] border-border bg-surface active:opacity-80',
+        compact ? 'justify-center gap-1 px-1.5 py-2' : 'flex-row gap-2 px-3 py-2 roomy:gap-3 roomy:px-4 roomy:py-3',
         checked && 'border-primary bg-primary-soft/40',
         invalid && !checked && 'border-danger/60',
         option.disabled && 'opacity-50',
-      )}>
+      )}
+    >
       {multiple ? <CheckMark checked={checked} /> : <RadioMark checked={checked} />}
-      <View className="flex-1 gap-0.5">
-        <Text weight={checked ? 'semibold' : 'medium'}>{option.label}</Text>
+      <View className={compact ? 'min-w-0 self-stretch' : 'min-w-0 flex-1 gap-0.5'}>
+        <Text
+          variant={compact ? 'caption' : 'body'}
+          align={compact ? 'center' : 'left'}
+          weight={checked ? 'semibold' : 'medium'}
+        >
+          {option.label}
+        </Text>
         {option.description && (
           <Text variant="caption" tone="muted">
             {option.description}
@@ -66,15 +75,23 @@ export function RadioGroup<T extends string | number>({
   direction = 'column',
   ...shell
 }: RadioGroupProps<T>) {
+  const { fontScale, width } = useWindowDimensions();
+  const compact =
+    direction === 'row' &&
+    width >= 280 &&
+    fontScale <= 1.25 &&
+    options.length <= 3 &&
+    options.every((option) => !option.description && option.label.length <= 5);
   return (
     <FieldShell {...shell}>
-      <View accessibilityRole="radiogroup" className={cn('gap-2.5', direction === 'row' && 'flex-row')}>
+      <View accessibilityRole="radiogroup" className={cn('gap-2.5', compact && 'flex-row')}>
         {options.map((option) => (
-          <View key={String(option.value)} className={direction === 'row' ? 'flex-1' : undefined}>
+          <View key={String(option.value)} className={compact ? 'min-w-0 flex-1' : undefined}>
             <OptionCard
               option={option}
               checked={option.value === value}
               multiple={false}
+              compact={compact}
               invalid={Boolean(shell.error)}
               onPress={() => onChange(option.value)}
             />
@@ -138,9 +155,10 @@ export function Checkbox({ checked, onChange, label, disabled, className }: Chec
       disabled={disabled}
       hitSlop={6}
       onPress={() => onChange(!checked)}
-      className={cn('flex-row items-center gap-2.5 self-start', className)}>
+      className={cn('min-h-[44px] max-w-full flex-row items-center gap-2.5 self-start', className)}
+    >
       <CheckMark checked={checked} disabled={disabled} />
-      <Text variant="caption" tone={disabled ? 'subtle' : 'muted'}>
+      <Text variant="caption" tone={disabled ? 'subtle' : 'muted'} className="shrink">
         {label}
       </Text>
     </Pressable>

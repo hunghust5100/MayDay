@@ -21,9 +21,16 @@ export function ContentModal({ visible, onClose, title, children }: ContentModal
   return (
     <Modal visible={visible} transparent animationType="none" statusBarTranslucent onRequestClose={onClose}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
-        <View className="flex-1 items-center justify-center px-5" style={{ paddingTop: Math.max(insets.top, 16), paddingBottom: Math.max(insets.bottom, 16) }}>
+        <View
+          className="flex-1 items-center justify-center px-3 roomy:px-5"
+          style={{
+            paddingTop: Math.max(insets.top, 12),
+            paddingBottom: Math.max(insets.bottom, 12),
+            paddingLeft: insets.left ? insets.left + 12 : undefined,
+            paddingRight: insets.right ? insets.right + 12 : undefined,
+          }}>
           <Pressable accessibilityLabel="Đóng" onPress={onClose} className="absolute inset-0 bg-text/50" />
-          <View testID="content-modal-panel" accessibilityViewIsModal className="w-full shrink rounded-card bg-surface p-5" style={[{ maxWidth: 480, maxHeight: '85%' }, shadowStyle.overlay]}>
+          <View testID="content-modal-panel" accessibilityViewIsModal className="w-full shrink rounded-card bg-surface p-3 roomy:p-5" style={[{ maxWidth: 480, maxHeight: '85%' }, shadowStyle.overlay]}>
             <View className="mb-2 flex-row items-center gap-2">
               <Text variant="h2" accessibilityRole="header" className="flex-1">{title}</Text>
               <IconButton icon={X} variant="ghost" accessibilityLabel="Đóng" onPress={onClose} />

@@ -28,14 +28,29 @@ for (const extension of ['.ts', '.tsx'])
   };
 const load = Module._load;
 let clientUser;
+let realSession;
+const savedSession = new Map();
 Module._load = function (request, ...args) {
   if (request === 'react-native') return { Platform: { OS: 'web' } };
+  if (request === '@/core/storage') {
+    return {
+      STORAGE_KEYS: { accessToken: 'token', sessionUser: 'user' },
+      secureStorage: {
+        get: async (key) => savedSession.get(key) ?? null,
+        getJSON: async (key) => savedSession.has(key) ? JSON.parse(savedSession.get(key)) : null,
+        set: async (key, value) => { savedSession.set(key, value); },
+        setJSON: async (key, value) => { savedSession.set(key, JSON.stringify(value)); },
+        remove: async (key) => { savedSession.delete(key); },
+      },
+    };
+  }
+  if (request === '@/core/notifications') return { readRegisteredPushToken: async () => 'device-test-token' };
   if (request === '@/core/auth')
     return {
       session: {
-        getToken: () => clientUser?.token,
-        getState: () => ({ status: 'signedIn' }),
-        signOut: async () => {},
+        getToken: () => realSession ? realSession.getToken() : clientUser?.token,
+        getState: () => realSession ? realSession.getState() : { status: 'signedIn' },
+        signOut: async () => realSession?.signOut(),
       },
     };
   if (request === '@/core/config') return { env: { apiUrl: 'http://test/api/v1', apiTimeout: 1000 } };
@@ -450,6 +465,14 @@ async function test(name, action) {
     });
     assert.equal(t1.id, t2.id);
     assert.equal(t2.user_id, 2);
+    const anotherDevice = await expect(2, 'POST', '/notifications/register_token', {
+      fcm_token: 'tok_android_2',
+      device_type: 'android',
+    });
+    assert.notEqual(t2.id, anotherDevice.id);
+    await expect(2, 'POST', '/auth/logout', { fcm_token: 'tok_a' });
+    assert.equal(db.user_fcm_tokens.has(t2.id), false);
+    assert.equal(db.user_fcm_tokens.has(anotherDevice.id), true);
   });
   await test('dynamic form 11 APIs, dynamic RBAC, clinical compatibility, 4105 and condition_rules integrity', async () => {
     // Dynamic RBAC: nurse (4) lacks permission -> 3102; grant manage_templates (4) -> allowed
@@ -552,6 +575,13 @@ async function test(name, action) {
     const notifPage = await notificationsApi.list({ page: 1, limit: 10 });
     assert.equal(notifPage.total, 25);
     assert.equal(notifPage.unread_count, 16);
+    for (const device_type of ['android', 'ios']) {
+      const fcm_token = `test-fcm-${device_type}`;
+      const registered = await notificationsApi.registerToken({ fcm_token, device_type });
+      assert.equal(registered.user_id, 15);
+      assert.equal(registered.fcm_token, fcm_token);
+      assert.equal(registered.device_type, device_type);
+    }
   });
   await test('uas7, prescriptions and labs contracts, permissions and adapters', async () => {
     const today = toApiDate(new Date());
@@ -680,6 +710,10 @@ async function test(name, action) {
     setClientUser: (id) => {
       clientUser = { token: issueToken(db.users.get(id)) };
     },
+  });
+  await require('./checks/auth-offline.cjs')({
+    assert, test, db, expect, savedSession,
+    setSession: (session) => { realSession = session; },
   });
   console.log('\n' + checks + ' contract scenarios passed.');
 })().catch((error) => {

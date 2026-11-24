@@ -10,6 +10,7 @@ module.exports = {
   darkMode: 'class',
   theme: {
     extend: {
+      screens: { roomy: '400px' },
       colors,
       borderRadius: px(radius),
       fontFamily: {
