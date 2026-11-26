@@ -1,6 +1,7 @@
 import { MEDICAL_RECORD_STATUS } from '@/shared/constants';
 import type { AnswerInput, ClinicalTemplate, FormActor, FormValues } from '@/shared/types/clinical-form';
 import { canFill, validateForm } from '@/shared/utils/clinical-form';
+import { deleteRecordMedia } from '../core/media-access';
 import { removeDiacritics } from '@/shared/utils';
 import { ROLE } from '../config';
 import { authenticate, requireAdmin } from '../core/auth';
@@ -320,7 +321,16 @@ export const medicalRoutes: RouteDef[] = [
           .map((a) => [a.question_id, a as AnswerInput]),
       );
       answers.forEach((a) => merged.set(a.question_id, a));
-      if (Object.keys(validateForm(template, formValues([...merged.values()], template), actor)).length) reject('2003');
+      // Answer rows must exist before images can be linked; enforce image requirements when completing.
+      if (
+        Object.keys(
+          validateForm(template, formValues([...merged.values()], template), actor, {
+            images: {},
+            deferImageRequirements: true,
+          }),
+        ).length
+      )
+        reject('2003');
       persistAnswers(record.medical_record_id, answers, user.user_id);
       return ok({ count: answers.length });
     },
@@ -350,6 +360,41 @@ export const medicalRoutes: RouteDef[] = [
       const body = readBody(req);
       const status = reqString(body, 'status');
       if (status !== 'completed' && status !== 'cancelled') reject('4009');
+      if (status === 'completed') {
+        const template = templateOf(record.template_id);
+        const answers = [...db.answers.values()].filter(
+          (a) => a.medical_record_id === record.medical_record_id,
+        );
+        const images = Object.fromEntries(
+          answers.map((a) => [
+            a.question_id,
+            [...db.answer_images.values()]
+              .filter((link) => link.answer_id === a.id)
+              .map((link) => ({
+                attachment_id: link.attachment_id,
+                file_url: db.media_attachments.get(link.attachment_id)?.file_url ?? '',
+                option_value: link.option_value,
+              })),
+          ]),
+        );
+        const imageQuestions = new Set(
+          template.sections
+            .flatMap((s) => s.questions)
+            .filter(
+              (q) =>
+                q.type_question === 'image_upload' ||
+                q.options?.some((o) => o.trigger_image_upload === 1 || o.trigger_image_upload === '1'),
+            )
+            .map((q) => q.question_id),
+        );
+        for (const actor of ['patient', 'doctor'] as const)
+          if (
+            Object.keys(validateForm(template, formValues(answers, template), actor, { images })).some((id) =>
+              imageQuestions.has(id),
+            )
+          )
+            reject('6001');
+      }
       record.instructions = optString(body, 'instructions') ?? record.instructions;
       record.status = status;
       record.updated_at = nowString();
@@ -363,6 +408,7 @@ export const medicalRoutes: RouteDef[] = [
     (req) => {
       requireAdmin(req);
       const { record } = readRecord(req);
+      deleteRecordMedia(record.medical_record_id);
       db.medical_records.delete(record.medical_record_id);
       for (const [id, answer] of db.answers)
         if (answer.medical_record_id === record.medical_record_id) db.answers.delete(id);

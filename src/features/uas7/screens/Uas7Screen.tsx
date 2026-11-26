@@ -24,7 +24,7 @@ import {
   Text,
   type ScoreBar,
 } from '@/shared/ui';
-import { addDays, formatDate, startOfDay, toApiDate, weekdayShort } from '@/shared/utils';
+import { addDays, formatDate, parseApiDate, toApiDate, weekdayShort } from '@/shared/utils';
 
 import { useCreateUas7Score, useUas7Eligibility, useUas7History } from '../hooks/useUas7';
 import { uas7Schema, type Uas7FormValues } from '../schemas';
@@ -71,7 +71,7 @@ export function Uas7Screen() {
   const todayKey = toApiDate(new Date());
 
   const form = useZodForm(uas7Schema, {
-    defaultValues: { iss7: 0, hss7: 0, note: '' },
+    defaultValues: { note: '' },
   });
 
   const sortedHistory = useMemo(
@@ -84,24 +84,28 @@ export function Uas7Screen() {
     [sortedHistory, todayKey],
   );
 
-  const { chartBars, weeklyTotal } = useMemo(() => {
+  const { chartBars, weeklyTotal, recordedDays } = useMemo(() => {
     const byDate = new Map(sortedHistory.map((item) => [item.score_date, item]));
-    const today = startOfDay(new Date());
+    const today = parseApiDate(todayKey) ?? new Date();
     const bars: ScoreBar[] = [];
     let total = 0;
+    let days = 0;
     for (let offset = -6; offset <= 0; offset++) {
       const date = addDays(today, offset);
       const key = toApiDate(date);
       const found = byDate.get(key);
-      if (found) total += found.daily_score;
+      if (found) {
+        total += found.daily_score;
+        days++;
+      }
       bars.push({
         label: weekdayShort(date),
         value: found ? found.daily_score : null,
         highlight: offset === 0,
       });
     }
-    return { chartBars: bars, weeklyTotal: total };
-  }, [sortedHistory]);
+    return { chartBars: bars, weeklyTotal: total, recordedDays: days };
+  }, [sortedHistory, todayKey]);
 
   const onBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
@@ -140,7 +144,7 @@ export function Uas7Screen() {
       },
       {
         onSuccess: () => {
-          form.reset({ iss7: 0, hss7: 0, note: '' });
+          form.reset();
         },
       },
     );
@@ -150,118 +154,125 @@ export function Uas7Screen() {
 
   return (
     <Screen header={<AppHeader title="Thang điểm UAS7" onBack={onBack} />}>
-      <View className="gap-4">
-        {eligibility.data?.eligible ? (
-          todayScore ? (
-            <Card padding="lg" className="gap-2 border-success/30 bg-success-soft">
-              <View className="flex-row items-center justify-between gap-2">
-                <View className="flex-row items-center gap-2">
-                  <Icon as={CheckCircle2} size={20} color="success" />
-                  <Text variant="h3" tone="success">
-                    Đã chấm điểm hôm nay
-                  </Text>
-                </View>
-                <Badge label={`${todayScore.daily_score}/6 điểm`} tone={dailyTone(todayScore.daily_score)} />
+      <View className="gap-3 roomy:gap-4">
+        {history.isLoading ? (
+          <Spinner />
+        ) : history.isError ? (
+          <ErrorState title="Chưa tải được điểm hôm nay" onRetry={() => void history.refetch()} />
+        ) : todayScore ? (
+          <Card padding="lg" className="gap-2 border-success/30 bg-success-soft">
+            <View className="flex-row flex-wrap items-center justify-between gap-2">
+              <View className="flex-row items-center gap-2">
+                <Icon as={CheckCircle2} size={20} color="success" />
+                <Text variant="h3" tone="success">
+                  Đã chấm điểm hôm nay
+                </Text>
               </View>
-              <Text variant="caption" tone="success">
-                Ngứa (ISS7): {todayScore.iss7} · Sẩn phù (HSS7): {todayScore.hss7}
+              <Badge label={`${todayScore.daily_score}/6 điểm`} tone={dailyTone(todayScore.daily_score)} />
+            </View>
+            <Text variant="caption" tone="success">
+              Ngứa (ISS7): {todayScore.iss7} · Sẩn phù (HSS7): {todayScore.hss7}
+            </Text>
+            {todayScore.note && (
+              <Text variant="caption" tone="muted">
+                Ghi chú: {todayScore.note}
               </Text>
-              {todayScore.note && (
-                <Text variant="caption" tone="muted">
-                  Ghi chú: {todayScore.note}
-                </Text>
+            )}
+          </Card>
+        ) : eligibility.data?.eligible ? (
+          <Card padding="lg" className="gap-3 roomy:gap-4">
+            <View className="gap-1">
+              <Text variant="h2">Chấm điểm hôm nay</Text>
+              <Text variant="caption" tone="muted">
+                Ngày {formatDate(todayKey)} · Bệnh án #{eligibility.data.medical_record_id}
+              </Text>
+            </View>
+
+            <FormField
+              control={form.control}
+              name="iss7"
+              render={(field) => (
+                <ScoreScale
+                  label="Mức độ ngứa (ISS7)"
+                  required
+                  levels={ISS7_LEVELS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={field.error}
+                />
               )}
-            </Card>
-          ) : (
-            <Card padding="lg" className="gap-4">
-              <View className="gap-1">
-                <Text variant="h2">Chấm điểm hôm nay</Text>
-                <Text variant="caption" tone="muted">
-                  Ngày {formatDate(todayKey)} · Bệnh án #{eligibility.data.medical_record_id}
-                </Text>
-              </View>
+            />
 
-              <FormField
-                control={form.control}
-                name="iss7"
-                render={(field) => (
-                  <ScoreScale
-                    label="Mức độ ngứa (ISS7)"
-                    required
-                    levels={ISS7_LEVELS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={field.error}
-                  />
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="hss7"
+              render={(field) => (
+                <ScoreScale
+                  label="Số lượng nốt sẩn phù (HSS7)"
+                  required
+                  levels={HSS7_LEVELS}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={field.error}
+                />
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="hss7"
-                render={(field) => (
-                  <ScoreScale
-                    label="Số lượng nốt sẩn phù (HSS7)"
-                    required
-                    levels={HSS7_LEVELS}
-                    value={field.value}
-                    onChange={field.onChange}
-                    error={field.error}
-                  />
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="note"
+              render={(field) => (
+                <TextField
+                  label="Ghi chú"
+                  placeholder="Triệu chứng nổi bật, yếu tố kích phát (nếu có)..."
+                  multiline
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  error={field.error}
+                />
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="note"
-                render={(field) => (
-                  <TextField
-                    label="Ghi chú"
-                    placeholder="Triệu chứng nổi bật, yếu tố kích phát (nếu có)..."
-                    multiline
-                    value={field.value}
-                    onChange={field.onChange}
-                    onBlur={field.onBlur}
-                    error={field.error}
-                  />
-                )}
-              />
-
-              <Button
-                title={submitMutation.isPending ? 'Đang gửi...' : 'Gửi kết quả hôm nay'}
-                fullWidth
-                loading={submitMutation.isPending}
-                onPress={() => void onSubmit()}
-              />
-            </Card>
-          )
+            <Button
+              title={submitMutation.isPending ? 'Đang gửi...' : 'Gửi kết quả hôm nay'}
+              fullWidth
+              loading={submitMutation.isPending}
+              onPress={() => void onSubmit()}
+            />
+          </Card>
         ) : (
           <Card padding="lg" className="border-warning/40 bg-warning-soft">
             <Text weight="semibold" tone="warning">
               Chưa đủ điều kiện chấm điểm UAS7
             </Text>
             <Text variant="caption" tone="muted" className="mt-1">
-              Bạn cần có bệnh án mề đay mạn tính đang chờ tiếp nhận hoặc đang điều trị để ghi nhận điểm hằng ngày.
+              Bạn cần có bệnh án mề đay mạn tính đang chờ tiếp nhận hoặc đang điều trị để ghi nhận điểm hằng
+              ngày.
             </Text>
           </Card>
         )}
 
         <StatCard
-          label="Tổng điểm UAS7 (7 ngày gần nhất)"
-          value={weeklyTotal}
-          unit="/ 42"
+          label={
+            recordedDays === 7 ? 'Tổng điểm UAS7 (7 ngày gần nhất)' : 'Điểm đã ghi trong 7 ngày gần nhất'
+          }
+          value={recordedDays ? weeklyTotal : '—'}
+          unit={recordedDays === 7 ? '/ 42' : undefined}
           icon={Activity}
           tone="teal"
-          footer={<Badge label={weekBadge.label} tone={weekBadge.tone} />}
+          footer={
+            recordedDays === 7 ? (
+              <Badge label={weekBadge.label} tone={weekBadge.tone} />
+            ) : (
+              <Badge label={`Đã ghi ${recordedDays}/7 ngày`} tone="neutral" />
+            )
+          }
         />
 
         <Card padding="lg" className="gap-3">
           <SectionHeader title="Biểu đồ 7 ngày gần nhất" />
-          <ScoreBarChart
-            data={chartBars}
-            max={6}
-            colorFor={(value) => getSeverityColor(value, 6)}
-          />
+          <ScoreBarChart data={chartBars} max={6} colorFor={(value) => getSeverityColor(value, 6)} />
         </Card>
 
         <Card padding="lg" className="gap-3">

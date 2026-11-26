@@ -46,6 +46,14 @@ export type ClinicalTemplate = { code_template: string; name: string; sections: 
 export type FormActor = 'patient' | 'doctor' | 'readonly';
 export type FormValue = string | number | string[] | null;
 export type FormValues = Record<string, FormValue>;
+/** Uploaded files selected for a question, before/after answer IDs are assigned. */
+export type ImageSelection = {
+  attachment_id: string;
+  file_url: string;
+  file_name?: string;
+  option_value?: string | null;
+};
+export type ImageSelections = Record<string, ImageSelection[]>;
 export type AnswerInput = {
   question_id: string;
   question_option_id?: number | null;

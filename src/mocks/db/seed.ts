@@ -2,6 +2,7 @@ import { toApiDateTime } from '@/shared/utils';
 
 import { MOCK_CONFIG, ROLE } from '../config';
 import { createClinicalSeed } from './clinical';
+import { createMediaLesionSeed } from './media-lesions';
 import { createModuleSeed } from './module-seed';
 import type {
   BranchRow,
@@ -42,7 +43,11 @@ const PERMISSIONS: [id: number, name: string, description: string][] = [
   [11, 'submit_uas7', 'Chấm điểm UAS7'],
   [12, 'manage_lesions', 'Theo dõi tổn thương da'],
   [13, 'upload_images', 'Tải ảnh lên'],
-  [14, 'manage_own_notifications', 'Hộp thư cá nhân (quyền fixture mock, không phải mapping backend đã chốt)'],
+  [
+    14,
+    'manage_own_notifications',
+    'Hộp thư cá nhân (quyền fixture mock, không phải mapping backend đã chốt)',
+  ],
 ];
 
 const ROLE_PERMISSIONS: Record<number, number[]> = {
@@ -58,8 +63,20 @@ const ROLE_PERMISSIONS: Record<number, number[]> = {
 const stamp = { created_at: SEED_TIME, updated_at: SEED_TIME };
 
 const BRANCHES: BranchRow[] = [
-  { id: 1, name: 'DrMayDay Cơ sở Hà Nội', address: '1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội', phone: '0243869999', ...stamp },
-  { id: 2, name: 'DrMayDay Cơ sở TP.HCM', address: '215 Hồng Bàng, Quận 5, TP. Hồ Chí Minh', phone: '0283855888', ...stamp },
+  {
+    id: 1,
+    name: 'DrMayDay Cơ sở Hà Nội',
+    address: '1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội',
+    phone: '0243869999',
+    ...stamp,
+  },
+  {
+    id: 2,
+    name: 'DrMayDay Cơ sở TP.HCM',
+    address: '215 Hồng Bàng, Quận 5, TP. Hồ Chí Minh',
+    phone: '0283855888',
+    ...stamp,
+  },
 ];
 
 const DEPARTMENTS: DepartmentRow[] = [
@@ -150,12 +167,24 @@ const ACCOUNTS: SeedUser[] = [
 
 // Bệnh nhân sinh tự động (ID 17–40) để có đủ dữ liệu thử phân trang/tìm kiếm.
 const LAST_NAMES = ['Nguyễn', 'Trần', 'Lê', 'Phạm', 'Hoàng', 'Vũ', 'Võ', 'Đặng', 'Bùi', 'Đỗ', 'Ngô', 'Dương'];
-const MIDDLE_NAMES = { male: ['Văn', 'Minh', 'Quốc', 'Đức', 'Hữu'], female: ['Thị', 'Ngọc', 'Thu', 'Thanh', 'Mai'] };
+const MIDDLE_NAMES = {
+  male: ['Văn', 'Minh', 'Quốc', 'Đức', 'Hữu'],
+  female: ['Thị', 'Ngọc', 'Thu', 'Thanh', 'Mai'],
+};
 const FIRST_NAMES = {
   male: ['Anh', 'Bảo', 'Dũng', 'Hải', 'Hùng', 'Khoa', 'Long', 'Nam', 'Phong', 'Quân', 'Sơn', 'Tuấn'],
   female: ['Chi', 'Giang', 'Hà', 'Hạnh', 'Lan', 'Linh', 'My', 'Nga', 'Phương', 'Thảo', 'Trang', 'Yến'],
 };
-const CITIES = ['Hà Nội', 'TP. Hồ Chí Minh', 'Đà Nẵng', 'Hải Phòng', 'Cần Thơ', 'Nghệ An', 'Thanh Hóa', 'Huế'];
+const CITIES = [
+  'Hà Nội',
+  'TP. Hồ Chí Minh',
+  'Đà Nẵng',
+  'Hải Phòng',
+  'Cần Thơ',
+  'Nghệ An',
+  'Thanh Hóa',
+  'Huế',
+];
 
 function generatedPatients(): SeedUser[] {
   return Array.from({ length: 24 }, (_, i) => {
@@ -234,19 +263,31 @@ export function createSeed(): MockDb {
       { id, name, description, created_at: SEED_TIME, updated_at: SEED_TIME },
     ]),
   );
-  const rolePermissions: RolePermissionRow[] = Object.entries(ROLE_PERMISSIONS).flatMap(([roleId, permissionIds]) =>
-    permissionIds.map((permissionId) => ({ id: 0, role_id: Number(roleId), permission_id: permissionId, created_at: SEED_TIME })),
+  const rolePermissions: RolePermissionRow[] = Object.entries(ROLE_PERMISSIONS).flatMap(
+    ([roleId, permissionIds]) =>
+      permissionIds.map((permissionId) => ({
+        id: 0,
+        role_id: Number(roleId),
+        permission_id: permissionId,
+        created_at: SEED_TIME,
+      })),
   );
   // Append grants so all existing role_permission IDs remain stable.
-  rolePermissions.push(...Object.keys(ROLE_PERMISSIONS).map((roleId) => ({
-    id: 0, role_id: Number(roleId), permission_id: 14, created_at: SEED_TIME,
-  })));
+  rolePermissions.push(
+    ...Object.keys(ROLE_PERMISSIONS).map((roleId) => ({
+      id: 0,
+      role_id: Number(roleId),
+      permission_id: 14,
+      created_at: SEED_TIME,
+    })),
+  );
   rolePermissions.forEach((row, i) => {
     row.id = i + 1;
   });
 
   return {
     ...createClinicalSeed(),
+    ...createMediaLesionSeed(),
     ...createModuleSeed(),
     users,
     patients,

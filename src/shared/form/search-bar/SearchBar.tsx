@@ -1,11 +1,12 @@
 import { Search, X } from 'lucide-react-native';
 import { useEffect, useRef } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable } from 'react-native';
 
 import { useDebounce } from '@/shared/hooks';
-import { colors, shadowStyle } from '@/shared/theme';
 import { Icon } from '@/shared/ui';
 import { cn } from '@/shared/utils';
+
+import { Input } from '../field/Input';
 
 export type SearchBarProps = {
   value: string;
@@ -33,42 +34,44 @@ export function SearchBar({
   useEffect(() => {
     onSearchRef.current = onSearch;
   }, [onSearch]);
-  const firstRun = useRef(true);
+  const lastSearch = useRef(value.trim());
 
   useEffect(() => {
-    // Bỏ qua lần render đầu: chỉ gọi khi người dùng thực sự đổi từ khóa.
-    if (firstRun.current) {
-      firstRun.current = false;
-      return;
-    }
+    if (lastSearch.current === term) return;
+    lastSearch.current = term;
     onSearchRef.current?.(term);
   }, [term]);
 
+  const searchNow = (query: string) => {
+    if (lastSearch.current === query) return;
+    lastSearch.current = query;
+    onSearch?.(query);
+  };
+
   return (
-    <View
-      className={cn('h-[50px] flex-row items-center gap-2.5 rounded-input border border-border bg-surface px-3.5', className)}
-      style={shadowStyle.card}>
-      <Icon as={Search} size={20} color="muted" />
-      <TextInput
-        value={value}
-        onChangeText={onChange}
-        placeholder={placeholder}
-        placeholderTextColor={colors.subtle}
-        selectionColor={colors.primary.DEFAULT}
-        autoFocus={autoFocus}
-        autoCorrect={false}
-        returnKeyType="search"
-        onSubmitEditing={() => onSearch?.(value.trim())}
-        accessibilityRole="search"
-        className="h-full flex-1 py-0 font-sans text-base text-text outline-none"
-      />
-      {value.length > 0 && (
-        <Pressable accessibilityRole="button" accessibilityLabel="Xóa từ khóa" hitSlop={10} onPress={() => onChange('')}>
-          <View className="h-6 w-6 items-center justify-center rounded-full bg-surface-2">
-            <Icon as={X} size={14} color="muted" />
-          </View>
+    <Input
+      value={value}
+      onChangeText={onChange}
+      leftIcon={Search}
+      placeholder={placeholder}
+      accessibilityLabel={placeholder}
+      autoFocus={autoFocus}
+      autoCorrect={false}
+      returnKeyType="search"
+      onSubmitEditing={() => searchNow(value.trim())}
+      containerClassName={cn('min-h-[46px] gap-2 roomy:min-h-[50px]', value.length > 0 && 'pr-1 roomy:pr-1', className)}
+      right={value.length > 0 && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Xóa từ khóa"
+          className="h-11 w-11 items-center justify-center rounded-btn active:bg-surface-2"
+          onPress={() => {
+            onChange('');
+            searchNow('');
+          }}>
+          <Icon as={X} size={18} color="muted" />
         </Pressable>
       )}
-    </View>
+    />
   );
 }

@@ -31,7 +31,7 @@ export function ProfileScreen() {
       header={
         <AppHeader
           title="Hồ sơ cá nhân"
-          onBack={router.back}
+          onBack={() => router.canGoBack() ? router.back() : router.replace('/patient/account')}
           right={
             profile && (
               <IconButton icon={Pencil} accessibilityLabel="Sửa hồ sơ" onPress={() => router.push('/patient/profile/edit')} />

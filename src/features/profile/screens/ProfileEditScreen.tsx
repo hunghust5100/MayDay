@@ -4,8 +4,7 @@ import { View } from 'react-native';
 import { z } from 'zod';
 
 import { getErrorMessage } from '@/core/api';
-import { DateField, FormField, NumberField, RadioGroup, TextField, useZodForm } from '@/shared/form';
-import { rules } from '@/shared/form';
+import { DateField, FormField, NumberField, RadioGroup, rules, TextField, useZodForm } from '@/shared/form';
 import { GENDER_OPTIONS } from '@/shared/constants';
 import { AppHeader, Button, ErrorState, Screen, Spinner, Text, toast } from '@/shared/ui';
 import { isValidPhone } from '@/shared/utils';
@@ -84,7 +83,7 @@ function EditForm({ profile }: { profile: PatientProfile }) {
 
   return (
     <Screen
-      header={<AppHeader title="Sửa hồ sơ" onBack={router.back} />}
+      header={<AppHeader title="Sửa hồ sơ" onBack={() => router.canGoBack() ? router.back() : router.replace('/patient/account')} />}
       footer={<Button title="Lưu thay đổi" fullWidth loading={update.isPending} onPress={() => submit()} />}>
       <View className="gap-[18px] pb-4">
         <SectionTitle>Thông tin cơ bản</SectionTitle>
@@ -142,7 +141,7 @@ export function ProfileEditScreen() {
   const { data: profile, error, refetch, isLoading } = useProfile();
   if (profile) return <EditForm profile={profile} />;
   return (
-    <Screen header={<AppHeader title="Sửa hồ sơ" onBack={router.back} />}>
+    <Screen header={<AppHeader title="Sửa hồ sơ" onBack={() => router.canGoBack() ? router.back() : router.replace('/patient/account')} />}>
       {isLoading ? <Spinner className="mt-10" /> : <ErrorState fill description={getErrorMessage(error)} onRetry={() => refetch()} />}
     </Screen>
   );

@@ -9,8 +9,8 @@ import { Text } from '../text/Text';
 
 const button = tv({
   slots: {
-    base: 'flex-row items-center justify-center gap-2 rounded-btn active:opacity-85',
-    label: 'font-sans-bold',
+    base: 'max-w-full flex-row items-center justify-center gap-2 rounded-btn active:opacity-85',
+    label: 'shrink text-center font-sans-bold',
   },
   variants: {
     variant: {
@@ -23,8 +23,8 @@ const button = tv({
       'danger-soft': { base: 'bg-danger-soft', label: 'text-danger-strong' },
     },
     size: {
-      md: { base: 'h-[52px] px-5', label: 'text-md' },
-      sm: { base: 'h-[38px] px-4', label: 'text-sm' },
+      md: { base: 'min-h-[48px] px-4 py-2 roomy:min-h-[52px] roomy:px-5', label: 'text-md' },
+      sm: { base: 'min-h-[44px] px-3 py-1.5 roomy:px-4', label: 'text-sm' },
     },
     fullWidth: { true: { base: 'self-stretch' }, false: { base: 'self-start' } },
     disabled: { true: { base: 'opacity-50' } },
@@ -64,6 +64,7 @@ export function Button({
   disabled,
   className,
   style,
+  accessibilityState,
   ...props
 }: ButtonProps) {
   const isDisabled = Boolean(disabled) || loading;
@@ -75,7 +76,7 @@ export function Button({
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityState={{ disabled: isDisabled, busy: loading }}
+      accessibilityState={{ ...accessibilityState, disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       className={styles.base({ className })}
       style={hasShadow ? [shadowStyle.primary, style as object] : style}

@@ -59,8 +59,8 @@ function FacilityForm({ kind, row }: { kind: FacilityKind; row?: Facility }) {
     ),
   );
   return (
-    <Screen header={<AppHeader title={`${row ? '' : 'Thêm '}${facilityLabels[kind]}`} onBack={router.back} />}>
-      <View className="gap-4">
+    <Screen header={<AppHeader title={`${row ? '' : 'Thêm '}${facilityLabels[kind]}`} onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/facilities')} />}>
+      <View className="gap-3 roomy:gap-4">
         {!editing && row ? (
           <>
             <Card padding="lg" className="gap-1">
@@ -201,7 +201,7 @@ function ExistingFacility({ kind, id }: { kind: FacilityKind; id: number }) {
   const router = useRouter();
   if (query.isLoading || query.isError)
     return (
-      <Screen header={<AppHeader title={facilityLabels[kind]} onBack={router.back} />}>
+      <Screen header={<AppHeader title={facilityLabels[kind]} onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/facilities')} />}>
         {query.isLoading ? <Spinner /> : <ErrorState onRetry={() => query.refetch()} />}
       </Screen>
     );

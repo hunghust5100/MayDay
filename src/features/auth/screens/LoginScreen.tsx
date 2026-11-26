@@ -5,7 +5,7 @@ import { Pressable, View } from 'react-native';
 
 import { applyFieldErrors } from '@/core/api';
 import { Checkbox, FormField, PasswordField, PhoneField, useZodForm } from '@/shared/form';
-import { Button, Divider, Text } from '@/shared/ui';
+import { Button, Text } from '@/shared/ui';
 
 import { AuthScaffold } from '../components/AuthScaffold';
 import { useLogin } from '../hooks/useAuthMutations';
@@ -25,7 +25,7 @@ export function LoginScreen() {
   }, [presetPhone, form]);
 
   const submit = form.handleSubmit((values) =>
-    login.mutate(values, {
+    !login.isPending && login.mutate(values, {
       onError: (error) =>
         applyFieldErrors(error, form.setError, {
           '2004': ['phone', 'Số điện thoại không hợp lệ'],
@@ -38,15 +38,22 @@ export function LoginScreen() {
 
   return (
     <AuthScaffold
-      title="Chào mừng trở lại"
-      subtitle="Theo dõi mề đay mỗi ngày, an tâm hơn mỗi ngày."
+      title="Đăng nhập"
       footer={
         <>
-          <Divider label="Chưa có tài khoản?" className="mb-4" />
-          <Button title="Đăng ký tài khoản bệnh nhân" variant="outline" fullWidth onPress={() => router.push('/signup')} />
+          <Text variant="caption" tone="muted" align="center">
+            Chưa có tài khoản?
+          </Text>
+          <Button
+            title="Đăng ký tài khoản bệnh nhân"
+            variant="outline"
+            fullWidth
+            onPress={() => router.push('/signup')}
+          />
         </>
-      }>
-      <View className="gap-[18px]">
+      }
+    >
+      <View className="gap-3 roomy:gap-[18px]">
         <FormField
           control={form.control}
           name="phone"
@@ -66,16 +73,21 @@ export function LoginScreen() {
             />
           )}
         />
-        <View className="flex-row items-center justify-between">
+        <View className="flex-row flex-wrap items-center justify-between gap-x-3">
           <FormField
             control={form.control}
             name="remember"
-            render={({ value, onChange }) => <Checkbox label="Ghi nhớ đăng nhập" checked={value} onChange={onChange} />}
+            render={({ value, onChange }) => (
+              <Checkbox label="Ghi nhớ đăng nhập" checked={value} onChange={onChange} />
+            )}
           />
           <Pressable
             accessibilityRole="link"
             hitSlop={8}
-            onPress={() => router.push({ pathname: '/forgot-password', params: { phone: form.getValues('phone') } })}>
+            onPress={() =>
+              router.push({ pathname: '/forgot-password', params: { phone: form.getValues('phone') } })
+            }
+          >
             <Text variant="caption" weight="semibold" tone="primary">
               Quên mật khẩu?
             </Text>

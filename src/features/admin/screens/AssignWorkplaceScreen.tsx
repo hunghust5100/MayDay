@@ -39,7 +39,7 @@ function AssignForm({ staff }: { staff: Staff }) {
 
   return (
     <Screen
-      header={<AppHeader title="Phân công công tác" onBack={router.back} />}
+      header={<AppHeader title="Phân công công tác" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}
       footer={<Button title="Lưu phân công" fullWidth loading={assign.isPending} onPress={submit} />}>
       <Card className="mb-5">
         <Text variant="caption" tone="muted">
@@ -66,7 +66,7 @@ export function AssignWorkplaceScreen() {
   const { data: user, isLoading, error, refetch } = useUser(id);
   if (user && !isPatientDetail(user)) return <AssignForm staff={user} />;
   return (
-    <Screen header={<AppHeader title="Phân công công tác" onBack={router.back} />}>
+    <Screen header={<AppHeader title="Phân công công tác" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/users')} />}>
       {isLoading ? (
         <Spinner fill />
       ) : (

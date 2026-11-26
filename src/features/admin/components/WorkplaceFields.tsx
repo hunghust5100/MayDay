@@ -43,7 +43,6 @@ export function WorkplaceFields({ value, onChange, errors }: WorkplaceFieldsProp
       />
       <SelectField
         label="Phòng khám"
-        hint="Bỏ trống nếu không có phòng cố định"
         leftIcon={DoorOpen}
         disabled={value.department_id === null}
         placeholder={value.department_id === null ? 'Chọn khoa trước' : 'Không có phòng cố định'}

@@ -27,7 +27,7 @@ export function FieldShell({
   children,
 }: FieldBaseProps & { children: ReactNode }) {
   return (
-    <View className={cn('gap-2', className)}>
+    <View className={cn('gap-1.5 roomy:gap-2', className)}>
       {label && (
         <Text variant="label">
           {label}

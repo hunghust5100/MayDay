@@ -28,11 +28,11 @@ export function ListItem({ title, description, leading, trailing, chevron, class
     <Pressable
       accessibilityRole={pressable ? 'button' : undefined}
       disabled={!pressable}
-      className={cn('min-h-14 flex-row items-center gap-3 py-3', pressable && 'active:opacity-70', className)}
+      className={cn('min-h-[48px] flex-row items-center gap-2 py-2 roomy:min-h-14 roomy:gap-3 roomy:py-3', pressable && 'active:opacity-70', className)}
       {...props}>
       {leading}
-      <View className="flex-1 gap-0.5">
-        <Text weight="semibold" numberOfLines={1}>
+      <View className="min-w-0 flex-1 gap-0.5">
+        <Text weight="semibold" numberOfLines={2}>
           {title}
         </Text>
         {description && (
@@ -41,7 +41,7 @@ export function ListItem({ title, description, leading, trailing, chevron, class
           </Text>
         )}
       </View>
-      {trailing && <View className="items-end">{trailing}</View>}
+      {trailing && <View className="max-w-[45%] shrink items-end">{trailing}</View>}
       {showChevron && <Icon as={ChevronRight} size={20} color="subtle" />}
     </Pressable>
   );

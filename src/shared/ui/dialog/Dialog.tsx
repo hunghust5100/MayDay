@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react-native';
 import type { ReactNode } from 'react';
-import { Modal, Pressable, View } from 'react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { shadowStyle } from '@/shared/theme';
 
@@ -24,17 +24,45 @@ export type DialogProps = {
 };
 
 /** Hộp thoại giữa màn hình. */
-export function Dialog({ visible, onClose, title, description, icon, destructive, children, actions }: DialogProps) {
+export function Dialog({
+  visible,
+  onClose,
+  title,
+  description,
+  icon,
+  destructive,
+  children,
+  actions,
+}: DialogProps) {
+  const insets = useSafeAreaInsets();
   return (
     <Modal visible={visible} transparent animationType="fade" statusBarTranslucent onRequestClose={onClose}>
-      <View className="flex-1 items-center justify-center px-6">
-        <Pressable accessibilityLabel="Đóng hộp thoại" onPress={onClose} className="absolute inset-0 bg-text/50" />
-        {/* Animated.View (reanimated) không nhận className — chỉ dùng cho hiệu ứng, style đặt ở View bên trong. */}
-        <Animated.View entering={ZoomIn.duration(180)} style={{ width: '100%', maxWidth: 384 }}>
-          <View className="rounded-sheet bg-surface p-6" style={shadowStyle.overlay}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        className="flex-1 items-center justify-center px-3 roomy:px-4"
+        style={{
+          paddingTop: insets.top + 8,
+          paddingBottom: insets.bottom + 8,
+          paddingLeft: insets.left ? insets.left + 12 : undefined,
+          paddingRight: insets.right ? insets.right + 12 : undefined,
+        }}
+      >
+        <Pressable
+          accessibilityLabel="Đóng hộp thoại"
+          onPress={onClose}
+          className="absolute inset-0 bg-text/50"
+        />
+        <View accessibilityViewIsModal className="w-full max-w-[384px] shrink" style={{ maxHeight: '100%' }}>
+          <ScrollView
+            keyboardShouldPersistTaps="handled"
+            className="grow-0 rounded-sheet bg-surface"
+            contentContainerClassName="p-3 roomy:p-5"
+            style={shadowStyle.overlay}
+          >
             {icon && (
               <View
-                className={`mb-4 h-14 w-14 items-center justify-center self-center rounded-full ${destructive ? 'bg-danger-soft' : 'bg-primary-soft'}`}>
+                className={`mb-4 h-14 w-14 items-center justify-center self-center rounded-full ${destructive ? 'bg-danger-soft' : 'bg-primary-soft'}`}
+              >
                 <Icon as={icon} size={26} color={destructive ? 'danger' : 'primary'} />
               </View>
             )}
@@ -47,10 +75,10 @@ export function Dialog({ visible, onClose, title, description, icon, destructive
               </Text>
             )}
             {children && <View className="mt-4">{children}</View>}
-            {actions && <View className="mt-6 gap-2.5">{actions}</View>}
-          </View>
-        </Animated.View>
-      </View>
+            {actions && <View className="mt-3 gap-2 roomy:mt-6 roomy:gap-2.5">{actions}</View>}
+          </ScrollView>
+        </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

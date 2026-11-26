@@ -1,7 +1,10 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { View } from 'react-native';
 import { canEditClinicalRecord, getRoleGroup, ROLE_IDS, useSession } from '@/core/auth';
+import { getErrorMessage } from '@/core/api';
+import { QuestionImageField, useRecordImages } from '@/features/media';
+import type { ImageSelections } from '@/shared/types/clinical-form';
 import {
   ClinicalForm,
   serializeAnswers,
@@ -30,6 +33,7 @@ import { formatDateTime } from '@/shared/utils';
 import { useRecord, useRecordMutations } from '../hooks/useRecords';
 import { recordUpdateSchema } from '../schemas';
 import type { MedicalRecord, RecordAnswer, RecordSummary } from '../types';
+import { saveRecordImages, visibleRecordImages } from '../api/record-media';
 
 function toValues(answers: RecordAnswer[], template: ClinicalTemplate): FormValues {
   const values: FormValues = {};
@@ -64,6 +68,11 @@ function DetailForm({
   const [instructions, setInstructions] = useState(record.instructions ?? '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [confirm, setConfirm] = useState<'completed' | 'cancelled' | 'delete' | null>(null);
+  const linkedImages = useRecordImages(answers);
+  const [imageDraft, setImageDraft] = useState<ImageSelections>({});
+  const [savingImages, setSavingImages] = useState(false);
+  const saving = useRef(false);
+  const images = { ...linkedImages.images, ...imageDraft };
   if (!user) return null;
   const patient = user.role_id === ROLE_IDS.PATIENT;
   const doctor = canEditClinicalRecord(user.role_id);
@@ -73,13 +82,37 @@ function DetailForm({
     : assigned && record.status === 'in_progress';
   const actor = editable ? (patient ? 'patient' : 'doctor') : 'readonly';
   const busy =
-    mutations.save.isPending || mutations.update.isPending || mutations.remove.isPending || mutations.accept.isPending;
+    mutations.save.isPending ||
+    mutations.update.isPending ||
+    mutations.remove.isPending ||
+    mutations.accept.isPending ||
+    savingImages;
+  const canSaveAnswers = !busy && !linkedImages.isLoading && !linkedImages.isError;
   const saveAnswers = async () => {
-    const validation = validateForm(template, values, actor);
+    if (!canSaveAnswers || saving.current) return false;
+    const desired = visibleRecordImages(template, values, images);
+    const validation = validateForm(template, values, actor, { images: desired });
     setErrors(validation);
-    if (Object.keys(validation).length) return false;
-    const body = serializeAnswers(template, values, actor);
-    if (body.length) await mutations.save.mutateAsync(body);
+    if (Object.keys(validation).length) {
+      toast.warning('Kiểm tra các câu hỏi được đánh dấu trong phiếu.');
+      return false;
+    }
+    const body = serializeAnswers(template, values, actor, desired);
+    saving.current = true;
+    setSavingImages(true);
+    try {
+      if (body.length) await mutations.save.mutateAsync(body);
+      try {
+        await saveRecordImages(record.medical_record_id, template, values, images, actor, linkedImages.images);
+        setImageDraft({});
+      } catch (error) {
+        toast.error(`Ảnh chưa lưu đầy đủ: ${getErrorMessage(error)}. Bấm lưu để thử lại.`);
+        throw error;
+      }
+    } finally {
+      saving.current = false;
+      setSavingImages(false);
+    }
     return true;
   };
   const finish = async () => {
@@ -88,7 +121,8 @@ function DetailForm({
       if (confirm === 'delete') {
         await mutations.remove.mutateAsync();
         toast.success('Đã xóa bệnh án.');
-        router.back();
+        if (router.canGoBack()) router.back();
+        else router.replace('/admin/records');
       } else {
         const body = recordUpdateSchema.parse({ status: confirm, instructions });
         if (confirm === 'completed' && !(await saveAnswers())) {
@@ -104,8 +138,8 @@ function DetailForm({
     }
   };
   return (
-    <Screen header={<AppHeader title={`Bệnh án #${record.medical_record_id}`} onBack={router.back} />}>
-      <View className="gap-4">
+    <Screen header={<AppHeader title={`Bệnh án #${record.medical_record_id}`} onBack={() => router.canGoBack() ? router.back() : router.replace('/')} />}>
+      <View className="gap-3 roomy:gap-4">
         <Card padding="lg" className="gap-1">
           <View className="mb-2 flex-row items-center justify-between gap-2">
             <Text variant="h2" className="flex-1">
@@ -127,7 +161,58 @@ function DetailForm({
           )}
         </Card>
         <Text variant="h3">{template.name}</Text>
-        <ClinicalForm template={template} values={values} onChange={setValues} actor={actor} errors={errors} />
+        {linkedImages.isLoading && <Text tone="muted">Đang tải ảnh đính kèm…</Text>}
+        {linkedImages.isError && (
+          <ErrorState title="Chưa tải được ảnh đính kèm" onRetry={() => linkedImages.refetch()} />
+        )}
+        <ClinicalForm
+          template={template}
+          values={values}
+          onChange={(next) => {
+            if (!busy) setValues(next);
+          }}
+          actor={actor}
+          errors={errors}
+          renderAttachments={(question, canEdit) => (
+            <QuestionImageField
+              question={question}
+              answer={values[question.question_id]}
+              images={images[question.question_id] ?? []}
+              editable={canEdit && !busy}
+              context={{
+                medical_record_id: record.medical_record_id,
+                question_id: question.question_id,
+                category: 'answer',
+              }}
+              onChange={(next) => setImageDraft((current) => ({ ...current, [question.question_id]: next }))}
+            />
+          )}
+        />
+        {patient && (
+          <Button
+            title="Theo dõi tổn thương của bệnh án"
+            variant="soft"
+            onPress={() =>
+              router.push({ pathname: '/patient/lesions', params: { recordId: record.medical_record_id } })
+            }
+          />
+        )}
+        {getRoleGroup(user.role_id) !== 'admin' && (
+          <Button
+            title="Xem kho ảnh bệnh nhân"
+            variant="ghost"
+            onPress={() =>
+              router.push({
+                pathname: patient ? '/patient/media' : '/doctor/media',
+                params: {
+                  userId: record.patient_id,
+                  recordId: record.medical_record_id,
+                  recordStatus: record.status,
+                },
+              })
+            }
+          />
+        )}
         {assigned && record.status === 'in_progress' ? (
           <TextField label="Chỉ dẫn của bác sĩ" multiline value={instructions} onChange={setInstructions} />
         ) : (
@@ -139,8 +224,8 @@ function DetailForm({
         {editable && (
           <Button
             title="Lưu câu trả lời"
-            disabled={busy}
-            loading={mutations.save.isPending}
+            disabled={!canSaveAnswers}
+            loading={savingImages}
             onPress={async () => {
               try {
                 if (await saveAnswers()) toast.success('Đã lưu câu trả lời.');
@@ -160,8 +245,13 @@ function DetailForm({
         )}
         {assigned && record.status === 'in_progress' && (
           <>
-            <Button title="Chốt bệnh án" disabled={busy} onPress={() => setConfirm('completed')} />
-            <Button title="Hủy bệnh án" variant="danger" disabled={busy} onPress={() => setConfirm('cancelled')} />
+            <Button title="Chốt bệnh án" disabled={!canSaveAnswers} onPress={() => setConfirm('completed')} />
+            <Button
+              title="Hủy bệnh án"
+              variant="danger"
+              disabled={busy}
+              onPress={() => setConfirm('cancelled')}
+            />
           </>
         )}
         {getRoleGroup(user.role_id) === 'admin' && (
@@ -170,7 +260,9 @@ function DetailForm({
       </View>
       <ConfirmDialog
         visible={confirm !== null}
-        title={confirm === 'delete' ? 'Xóa bệnh án?' : confirm === 'cancelled' ? 'Hủy bệnh án?' : 'Chốt bệnh án?'}
+        title={
+          confirm === 'delete' ? 'Xóa bệnh án?' : confirm === 'cancelled' ? 'Hủy bệnh án?' : 'Chốt bệnh án?'
+        }
         description={
           confirm === 'delete'
             ? 'Bệnh án và các câu trả lời sẽ bị xóa. Tệp ảnh gốc được giữ lại.'
@@ -191,10 +283,9 @@ function RecordDetail({ id }: { id: number }) {
   const { detail, summary, answers } = useRecord(id);
   const template = useTemplate(detail.data?.template_id);
   const loading = detail.isLoading || answers.isLoading || (detail.isSuccess && template.isLoading);
-  const failed = detail.isError || answers.isError || template.isError;
-  if (loading || failed || !detail.data || !answers.data || !template.data)
+  if (!detail.data || !answers.data || !template.data)
     return (
-      <Screen header={<AppHeader title="Chi tiết bệnh án" onBack={router.back} />}>
+      <Screen header={<AppHeader title="Chi tiết bệnh án" onBack={() => router.canGoBack() ? router.back() : router.replace('/')} />}>
         {loading ? (
           <Spinner />
         ) : (
@@ -211,7 +302,7 @@ function RecordDetail({ id }: { id: number }) {
     );
   return (
     <DetailForm
-      key={`${id}-${detail.data.status}-${detail.data.updated_at ?? ''}`}
+      key={`${id}-${detail.data.status}`}
       record={detail.data}
       summary={summary.data}
       answers={answers.data}
@@ -220,10 +311,11 @@ function RecordDetail({ id }: { id: number }) {
   );
 }
 export function MedicalRecordDetailScreen() {
+  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   if (!/^[1-9]\d*$/.test(id ?? ''))
     return (
-      <Screen>
+      <Screen header={<AppHeader title="Chi tiết bệnh án" onBack={() => router.canGoBack() ? router.back() : router.replace('/')} />}>
         <EmptyState title="Bệnh án không hợp lệ" />
       </Screen>
     );

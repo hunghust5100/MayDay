@@ -37,7 +37,7 @@ function PermissionForm({ permission }: { permission?: Permission }) {
 
   return (
     <Screen
-      header={<AppHeader title={isEdit ? 'Sửa quyền' : 'Thêm quyền'} onBack={router.back} />}
+      header={<AppHeader title={isEdit ? 'Sửa quyền' : 'Thêm quyền'} onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/rbac')} />}
       footer={<Button title={isEdit ? 'Lưu thay đổi' : 'Tạo quyền'} fullWidth loading={saving} onPress={() => submit()} />}>
       <View className="gap-[18px]">
         <FormField
@@ -109,7 +109,7 @@ export function PermissionEditScreen() {
   const permission = permissions?.find((p) => p.id === id);
   if (permission) return <PermissionForm permission={permission} />;
   return (
-    <Screen header={<AppHeader title="Sửa quyền" onBack={router.back} />}>
+    <Screen header={<AppHeader title="Sửa quyền" onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/rbac')} />}>
       {isLoading ? (
         <Spinner fill />
       ) : (

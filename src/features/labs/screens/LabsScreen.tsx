@@ -1,6 +1,6 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { FlaskConical, Plus, Trash2 } from 'lucide-react-native';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useFieldArray } from 'react-hook-form';
 import { View } from 'react-native';
 
@@ -12,6 +12,7 @@ import {
   Badge,
   Button,
   Card,
+  ConfirmDialog,
   Divider,
   EmptyState,
   ErrorState,
@@ -45,6 +46,9 @@ export function LabsScreen() {
   const resultsQuery = useLabResults(recordId);
   const createMutation = useCreateLabRequest(recordId);
 
+  const [nextRecordId, setNextRecordId] = useState<number | null>(null);
+  const submitting = useRef(false);
+
   const form = useZodForm(labRequestSchema, {
     defaultValues: { note: '', items: [{ ...EMPTY_ITEM }] },
   });
@@ -54,10 +58,21 @@ export function LabsScreen() {
     name: 'items',
   });
 
+  const { isDirty } = form.formState;
+  const selectRecord = (nextId: number) => {
+    if (nextId === recordId || submitting.current) return;
+    if (recordId !== null && isDirty) {
+      setNextRecordId(nextId);
+      return;
+    }
+    setRecordId(nextId);
+  };
+
   const onBack = () => (router.canGoBack() ? router.back() : router.replace('/'));
 
-  const onSubmit = form.handleSubmit((values: LabRequestFormValues) => {
-    if (!recordId) return;
+  const submit = (values: LabRequestFormValues) => {
+    if (!recordId || submitting.current) return;
+    submitting.current = true;
     createMutation.mutate(
       {
         medical_record_id: recordId,
@@ -68,34 +83,34 @@ export function LabsScreen() {
         })),
       },
       {
+        onSettled: () => {
+          submitting.current = false;
+        },
         onSuccess: () => {
           form.reset({ note: '', items: [{ ...EMPTY_ITEM }] });
         },
       },
     );
-  });
+  };
 
   return (
     <Screen header={<AppHeader title="Cận lâm sàng" onBack={onBack} />}>
-      <View className="gap-4">
+      <View className="gap-3 roomy:gap-4">
         <RecordSelector
           value={recordId}
-          onChange={setRecordId}
+          onChange={selectRecord}
+          disabled={createMutation.isPending}
           initialRecordId={parseRecordId(paramRecordId)}
         />
 
         {recordId !== null && canRequestLabs && (
-          <Card padding="lg" className="gap-4">
-            <SectionHeader
-              title="Chỉ định xét nghiệm mới"
-              actionLabel="Thêm xét nghiệm"
-              onAction={() => append({ ...EMPTY_ITEM })}
-            />
+          <Card padding="lg" className="gap-3 roomy:gap-4">
+            <SectionHeader title="Chỉ định xét nghiệm" className="mb-0 mt-0" />
 
             {fields.map((fieldItem, index) => (
               <View key={fieldItem.id} className="gap-3 rounded-card border border-border bg-bg p-3">
-                <View className="flex-row items-center justify-between">
-                  <Text variant="label">Xét nghiệm #{index + 1}</Text>
+                <View className="flex-row items-center gap-2">
+                  <Text variant="label" className="min-w-0 flex-1">Xét nghiệm {index + 1}</Text>
                   {fields.length > 1 && (
                     <Button
                       title="Xóa"
@@ -114,7 +129,7 @@ export function LabsScreen() {
                     <TextField
                       label="Tên xét nghiệm"
                       required
-                      placeholder="VD: Định lượng IgE đặc hiệu"
+                      placeholder="VD: Định lượng IgE"
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -128,8 +143,8 @@ export function LabsScreen() {
                   name={`items.${index}.description`}
                   render={(field) => (
                     <TextField
-                      label="Mô tả / Chỉ định chi tiết"
-                      placeholder="VD: Đánh giá dị ứng nguyên hô hấp"
+                      label="Chi tiết chỉ định"
+                      placeholder="VD: Dị ứng hô hấp"
                       value={field.value}
                       onChange={field.onChange}
                       onBlur={field.onBlur}
@@ -166,7 +181,7 @@ export function LabsScreen() {
                 title={createMutation.isPending ? 'Đang lưu...' : 'Lưu chỉ định'}
                 fullWidth
                 loading={createMutation.isPending}
-                onPress={() => void onSubmit()}
+                onPress={() => void form.handleSubmit(submit)()}
               />
             </View>
           </Card>
@@ -174,17 +189,13 @@ export function LabsScreen() {
 
         {recordId !== null && (
           <Card padding="lg" className="gap-3">
-            <SectionHeader title={`Kết quả cận lâm sàng · Bệnh án #${recordId}`} />
+            <SectionHeader title="Kết quả xét nghiệm" className="mb-0 mt-0" />
             {resultsQuery.isLoading ? (
               <Spinner />
             ) : resultsQuery.isError ? (
               <ErrorState onRetry={() => void resultsQuery.refetch()} />
             ) : (resultsQuery.data?.length ?? 0) === 0 ? (
-              <EmptyState
-                icon={FlaskConical}
-                title="Chưa có chỉ định xét nghiệm"
-                description="Các xét nghiệm được chỉ định và kết quả sẽ hiển thị tại đây."
-              />
+              <EmptyState icon={FlaskConical} title="Chưa có chỉ định xét nghiệm" />
             ) : (
               <View className="gap-3">
                 {resultsQuery.data!.map((lab, index) => {
@@ -228,6 +239,20 @@ export function LabsScreen() {
           </Card>
         )}
       </View>
+      <ConfirmDialog
+        visible={nextRecordId !== null}
+        title="Đổi bệnh án?"
+        description="Đổi bệnh án sẽ xóa nội dung đang nhập."
+        confirmLabel="Đổi bệnh án"
+        cancelLabel="Tiếp tục nhập"
+        onCancel={() => setNextRecordId(null)}
+        onConfirm={() => {
+          if (nextRecordId === null) return;
+          form.reset({ note: '', items: [{ ...EMPTY_ITEM }] });
+          setRecordId(nextRecordId);
+          setNextRecordId(null);
+        }}
+      />
     </Screen>
   );
 }

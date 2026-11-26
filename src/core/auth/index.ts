@@ -3,6 +3,7 @@ export { RoleStack, SignedInStack, SignedOutStack } from './guards';
 export {
   canCreatePatient,
   canEditClinicalRecord,
+  canUploadMedia,
   getRoleGroup,
   ROLE_GROUP_LABELS,
   ROLE_HOME,

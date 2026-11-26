@@ -4,36 +4,36 @@
  * Component chỉ dùng tên theo ý nghĩa (bg-surface, text-muted...), không dùng màu thô.
  */
 const colors = {
-  bg: '#F6F8FA',
+  bg: '#F4F7F6',
   surface: '#FFFFFF',
-  'surface-2': '#F1F5F9',
-  text: '#0F172A',
-  muted: '#64748B',
-  subtle: '#94A3B8',
-  border: '#E2E8F0',
+  'surface-2': '#ECF2F0',
+  text: '#182A29',
+  muted: '#536662',
+  subtle: '#617572',
+  border: '#D9E3E0',
 
-  primary: { DEFAULT: '#0D9488', strong: '#0F766E', soft: '#CCFBF1' },
+  primary: { DEFAULT: '#08665D', strong: '#07534D', soft: '#E1F3ED' },
   'on-primary': '#FFFFFF',
 
   success: { DEFAULT: '#22C55E', strong: '#15803D', soft: '#DCFCE7' },
-  warning: { DEFAULT: '#F59E0B', strong: '#B45309', soft: '#FEF3C7' },
-  danger: { DEFAULT: '#EF4444', strong: '#B91C1C', soft: '#FEE2E2' },
+  warning: { DEFAULT: '#F59E0B', strong: '#B45309', soft: '#FAF1DF' },
+  danger: { DEFAULT: '#BB2E3E', strong: '#B91C1C', soft: '#FEE2E2' },
   info: { DEFAULT: '#3B82F6', strong: '#1D4ED8', soft: '#DBEAFE' },
-  neutral: { DEFAULT: '#64748B', strong: '#475569', soft: '#F1F5F9' },
+  neutral: { DEFAULT: '#536662', strong: '#475569', soft: '#ECF2F0' },
 
   // Thang mức độ 0–3 (UAS7, triệu chứng)
-  severity: { 0: '#22C55E', 1: '#84CC16', 2: '#F59E0B', 3: '#EF4444' },
+  severity: { 0: '#22C55E', 1: '#84CC16', 2: '#F59E0B', 3: '#BB2E3E' },
 
   // Ô màu truy cập nhanh
   tile: {
-    teal: '#CCFBF1', 'teal-fg': '#0F766E',
-    indigo: '#E0E7FF', 'indigo-fg': '#4338CA',
-    rose: '#FFE4E6', 'rose-fg': '#BE123C',
-    amber: '#FEF3C7', 'amber-fg': '#B45309',
+    teal: '#E1F3ED', 'teal-fg': '#07534D',
+    indigo: '#EEF0FA', 'indigo-fg': '#4338CA',
+    rose: '#FAEDF1', 'rose-fg': '#BE123C',
+    amber: '#FAF1DF', 'amber-fg': '#B45309',
   },
 };
 
-const radius = { input: 14, btn: 14, card: 16, tile: 18, sheet: 24 };
+const radius = { input: 12, btn: 12, card: 16, tile: 14, sheet: 22 };
 
 /** Tên font đã nạp từ @expo-google-fonts/be-vietnam-pro, theo độ đậm. */
 const fonts = {
@@ -58,8 +58,8 @@ const fontSize = {
 
 /** Đổ bóng (CSS box-shadow, React Native ≥ 0.76 hỗ trợ cả iOS/Android/web). */
 const shadows = {
-  card: '0px 1px 2px rgba(15,23,42,0.05), 0px 1px 3px rgba(15,23,42,0.06)',
-  primary: '0px 8px 18px -8px rgba(13,148,136,1)',
+  card: '0px 1px 2px rgba(24,42,41,0.035)',
+  primary: '0px 2px 5px rgba(8,102,93,0.14)',
   /** Thẻ nổi trên nền (VD thẻ form đè lên header). */
   raised: '0px 16px 36px -14px rgba(15,23,42,0.20), 0px 2px 6px rgba(15,23,42,0.04)',
   overlay: '0px 12px 32px -8px rgba(15,23,42,0.25)',

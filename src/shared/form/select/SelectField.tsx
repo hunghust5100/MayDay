@@ -23,25 +23,31 @@ function OptionList<T extends string | number>({
   isSelected,
   onSelect,
   searchable,
+  fill,
 }: {
   options: readonly SelectOption<T>[];
   isSelected: (value: T) => boolean;
   onSelect: (value: T) => void;
   searchable: boolean;
+  fill: boolean;
 }) {
   const [keyword, setKeyword] = useState('');
   const filtered = useMemo(() => {
     const key = removeDiacritics(keyword.trim());
     if (!key) return options;
-    return options.filter((option) => removeDiacritics(option.label).includes(key));
+    return options.filter((option) =>
+      removeDiacritics([option.label, option.description].filter(Boolean).join(' ')).includes(key),
+    );
   }, [options, keyword]);
 
   return (
     <>
-      {searchable && <SearchBar value={keyword} onChange={setKeyword} placeholder="Tìm nhanh" className="mb-2" />}
-      <ScrollView keyboardShouldPersistTaps="handled" className="shrink grow-0">
+      {searchable && (
+        <SearchBar value={keyword} onChange={setKeyword} placeholder="Tìm nhanh" className="mb-2" />
+      )}
+      <ScrollView keyboardShouldPersistTaps="handled" className={fill ? 'min-h-0 flex-1' : 'shrink grow-0'}>
         {filtered.length === 0 ? (
-          <EmptyState title="Không tìm thấy" description="Thử từ khóa khác." />
+          <EmptyState title={keyword.trim() ? 'Không tìm thấy' : 'Chưa có lựa chọn'} />
         ) : (
           filtered.map((option) => {
             const selected = isSelected(option.value);
@@ -55,7 +61,8 @@ function OptionList<T extends string | number>({
                 className={cn(
                   'min-h-14 flex-row items-center gap-3 border-b border-border py-3 active:opacity-70',
                   option.disabled && 'opacity-40',
-                )}>
+                )}
+              >
                 <View className="flex-1 gap-0.5">
                   <Text weight={selected ? 'semibold' : 'regular'} tone={selected ? 'primary' : 'default'}>
                     {option.label}
@@ -107,6 +114,8 @@ export function SelectField<T extends string | number>({
 }: SelectFieldProps<T>) {
   const sheet = useDisclosure();
   const Popup = presentation === 'dialog' ? ContentModal : BottomSheet;
+  const showSearch = searchable ?? options.length > 8;
+  const fixedHeight = presentation === 'sheet' && (showSearch || options.length >= 5);
   const current = options.find((option) => option.value === value);
 
   return (
@@ -120,10 +129,16 @@ export function SelectField<T extends string | number>({
         accessibilityLabel={shell.label}
         onPress={sheet.open}
       />
-      <Popup visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
+      <Popup
+        visible={sheet.isOpen}
+        onClose={sheet.close}
+        title={sheetTitle ?? shell.label}
+        fixedHeight={fixedHeight}
+      >
         <OptionList
           options={options}
-          searchable={searchable ?? options.length > 8}
+          fill={fixedHeight}
+          searchable={showSearch}
           isSelected={(v) => v === value}
           onSelect={(v) => {
             onChange(v);
@@ -155,10 +170,13 @@ export function MultiSelectField<T extends string | number>({
 }: MultiSelectFieldProps<T>) {
   const sheet = useDisclosure();
   const Popup = presentation === 'dialog' ? ContentModal : BottomSheet;
+  const showSearch = searchable ?? options.length > 8;
+  const fixedHeight = presentation === 'sheet' && (showSearch || options.length >= 5);
   const [draft, setDraft] = useState<T[]>([]);
   const selected = value ?? [];
   const labels = options.filter((option) => selected.includes(option.value)).map((option) => option.label);
-  const display = labels.length > 2 ? `${labels.slice(0, 2).join(', ')} +${labels.length - 2}` : labels.join(', ');
+  const display =
+    labels.length > 2 ? `${labels.slice(0, 2).join(', ')} +${labels.length - 2}` : labels.join(', ');
 
   const openSheet = () => {
     setDraft([...selected]);
@@ -176,10 +194,16 @@ export function MultiSelectField<T extends string | number>({
         accessibilityLabel={shell.label}
         onPress={openSheet}
       />
-      <Popup visible={sheet.isOpen} onClose={sheet.close} title={sheetTitle ?? shell.label}>
+      <Popup
+        visible={sheet.isOpen}
+        onClose={sheet.close}
+        title={sheetTitle ?? shell.label}
+        fixedHeight={fixedHeight}
+      >
         <OptionList
           options={options}
-          searchable={searchable ?? options.length > 8}
+          fill={fixedHeight}
+          searchable={showSearch}
           isSelected={(v) => draft.includes(v)}
           onSelect={(v) => setDraft((d) => (d.includes(v) ? d.filter((x) => x !== v) : [...d, v]))}
         />

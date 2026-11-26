@@ -94,25 +94,32 @@ export function ImagePickerField({
   };
 
   const pick = async (source: 'camera' | 'library') => {
+    if (disabled || remaining <= 0) return;
     sourceSheet.close();
-    const permission =
-      source === 'camera'
-        ? await ImagePicker.requestCameraPermissionsAsync()
-        : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      toast.error(source === 'camera' ? 'Chưa được cấp quyền dùng camera.' : 'Chưa được cấp quyền truy cập ảnh.');
-      return;
+    try {
+      const permission =
+        source === 'camera'
+          ? await ImagePicker.requestCameraPermissionsAsync()
+          : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!permission.granted) {
+        toast.error(
+          source === 'camera' ? 'Chưa được cấp quyền dùng camera.' : 'Chưa được cấp quyền truy cập ảnh.',
+        );
+        return;
+      }
+      const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.8 };
+      const result =
+        source === 'camera'
+          ? await ImagePicker.launchCameraAsync(options)
+          : await ImagePicker.launchImageLibraryAsync({
+              ...options,
+              allowsMultipleSelection: remaining > 1,
+              selectionLimit: remaining,
+            });
+      if (!result.canceled) accept(result.assets);
+    } catch {
+      toast.error('Không mở được ảnh. Vui lòng thử lại hoặc kiểm tra quyền camera/thư viện.');
     }
-    const options: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 0.8 };
-    const result =
-      source === 'camera'
-        ? await ImagePicker.launchCameraAsync(options)
-        : await ImagePicker.launchImageLibraryAsync({
-            ...options,
-            allowsMultipleSelection: remaining > 1,
-            selectionLimit: remaining,
-          });
-    if (!result.canceled) accept(result.assets);
   };
 
   const onAdd = () => {
@@ -130,7 +137,8 @@ export function ImagePickerField({
         className={cn(
           'flex-1 items-center justify-center gap-1 rounded-xl border-[1.5px] border-dashed border-primary bg-primary-soft/40 active:opacity-70',
           shell.error && 'border-danger',
-        )}>
+        )}
+      >
         <Icon as={ImagePlus} size={24} color="primary" />
         <Text variant="tiny" weight="semibold" tone="primary">
           {images.length}/{max}

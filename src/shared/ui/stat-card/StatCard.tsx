@@ -24,14 +24,14 @@ export type StatCardProps = {
 /** Thẻ chỉ số nổi bật — tổng điểm UAS7 tuần, số bệnh án chờ tiếp nhận... */
 export function StatCard({ label, value, unit, icon, tone = 'teal', footer, onPress, className }: StatCardProps) {
   return (
-    <Card onPress={onPress} className={cn('gap-3', className)}>
-      <View className="flex-row items-center justify-between gap-3">
+    <Card onPress={onPress} className={cn('gap-2', className)}>
+      <View className="flex-row items-center gap-2">
+        {icon && <IconTile icon={icon} tone={tone} size="sm" />}
         <Text variant="caption" weight="semibold" tone="muted" className="flex-1">
           {label}
         </Text>
-        {icon && <IconTile icon={icon} tone={tone} className="scale-75" />}
       </View>
-      <Text variant="display" className="text-[40px] leading-[44px]">
+      <Text variant="display">
         {value}
         {unit && (
           <Text variant="body-lg" weight="semibold" tone="muted">

@@ -83,7 +83,7 @@ export function AdminUsersScreen() {
         <View className="pb-2">
           <ListItem
             title="Thêm người dùng"
-            description="Tạo tài khoản và gán vai trò trực tiếp (VD bệnh nhân)"
+            description="Tạo tài khoản và chọn vai trò"
             leading={
               <View className="h-11 w-11 items-center justify-center rounded-full bg-primary-soft">
                 <Icon as={UserPlus} size={22} color="primary-strong" />
@@ -93,7 +93,7 @@ export function AdminUsersScreen() {
           />
           <ListItem
             title="Thêm nhân viên y tế"
-            description="Bác sĩ, điều dưỡng… kèm chi nhánh, khoa, phòng công tác"
+            description="Tạo tài khoản kèm nơi công tác"
             leading={
               <View className="h-11 w-11 items-center justify-center rounded-full bg-info-soft">
                 <Icon as={BriefcaseMedical} size={22} color="info" />

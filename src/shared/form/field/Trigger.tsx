@@ -31,16 +31,17 @@ export function Trigger({
     <Pressable
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
+      accessibilityValue={display ? { text: display } : undefined}
       disabled={disabled}
       onPress={onPress}
       className={cn(
-        'h-[54px] flex-row items-center gap-2.5 rounded-input border-[1.5px] border-border bg-surface px-4 active:opacity-80',
+        'min-h-[48px] min-w-0 flex-row items-center gap-2 rounded-input border-[1.5px] border-border bg-surface px-3 py-2 roomy:min-h-[54px] roomy:gap-2.5 roomy:px-4 active:opacity-80',
         invalid && 'border-danger',
         disabled && 'bg-surface-2',
       )}>
       {leftIcon && <Icon as={leftIcon} size={20} color="muted" />}
-      <View className="flex-1">
-        <Text variant="body-lg" tone={display ? (disabled ? 'muted' : 'default') : 'subtle'} numberOfLines={1}>
+      <View className="min-w-0 flex-1">
+        <Text variant="body-lg" tone={display ? (disabled ? 'muted' : 'default') : 'subtle'} numberOfLines={2}>
           {display || placeholder}
         </Text>
       </View>

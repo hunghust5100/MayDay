@@ -20,12 +20,17 @@ export type AppHeaderProps = {
 /** Thanh tiêu đề màn hình con: quay lại – tiêu đề giữa – hành động phải. */
 export function AppHeader({ title, subtitle, onBack, right, className }: AppHeaderProps) {
   return (
-    <View className={cn('min-h-14 flex-row items-center gap-3 pb-3 pt-1.5', className)}>
-      <View className="w-11">
+    <View
+      className={cn(
+        'min-h-[52px] flex-row items-center gap-2 pb-2 pt-1 roomy:gap-3 roomy:pb-3 roomy:pt-1.5',
+        className,
+      )}
+    >
+      <View className="w-[44px]">
         {onBack && <IconButton icon={ChevronLeft} accessibilityLabel="Quay lại" onPress={onBack} />}
       </View>
       <View className="flex-1 items-center">
-        <Text variant="h2" numberOfLines={1} accessibilityRole="header">
+        <Text variant="h2" align="center" numberOfLines={2} accessibilityRole="header">
           {title}
         </Text>
         {subtitle && (
@@ -34,7 +39,7 @@ export function AppHeader({ title, subtitle, onBack, right, className }: AppHead
           </Text>
         )}
       </View>
-      <View className="min-w-11 items-end">{right}</View>
+      <View className="min-w-[44px] items-end">{right}</View>
     </View>
   );
 }

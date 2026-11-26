@@ -47,15 +47,15 @@ function AssignSheet({ roleId, assigned, visible, onClose }: { roleId: number; a
   };
 
   return (
-    <BottomSheet visible={visible} onClose={close} title="Cấp thêm quyền">
+    <BottomSheet visible={visible} onClose={close} title="Cấp quyền" fixedHeight>
       {available.length === 0 ? (
         <EmptyState icon={KeyRound} title="Vai trò đã có tất cả các quyền" className="py-8" />
       ) : (
-        <View className="shrink gap-4 pb-2">
+        <View className="min-h-0 flex-1 gap-3">
           {/* Danh sách dài thì cuộn trong sheet, nút xác nhận luôn hiển thị */}
-          <ScrollView className="shrink grow-0" showsVerticalScrollIndicator={false}>
+          <ScrollView className="min-h-0 flex-1" keyboardShouldPersistTaps="handled">
             <CheckboxGroup
-              options={available.map((p) => ({ value: p.id, label: p.description || p.name, description: p.name }))}
+              options={available.map((p) => ({ value: p.id, label: p.description || p.name }))}
               value={selected}
               onChange={setSelected}
             />
@@ -95,7 +95,7 @@ export function RoleDetailScreen() {
   const children = roles?.filter((r) => r.parent_role_id === id) ?? [];
 
   return (
-    <Screen header={<AppHeader title={role ? roleTitle(role) : 'Vai trò'} onBack={router.back} />}>
+    <Screen header={<AppHeader title={role ? roleTitle(role) : 'Vai trò'} onBack={() => router.canGoBack() ? router.back() : router.replace('/admin/rbac')} />}>
       {role && (
         <Card className="gap-1 py-2">
           <InfoRow label="Tên định danh" value={role.name} />
@@ -108,8 +108,6 @@ export function RoleDetailScreen() {
 
       <SectionHeader
         title={`Quyền đã cấp${granted ? ` (${granted.length})` : ''}`}
-        actionLabel="Cấp thêm"
-        onAction={() => setAssigning(true)}
         className="mb-2 mt-6"
       />
       {isLoading && <Spinner className="mt-6" />}
@@ -129,7 +127,7 @@ export function RoleDetailScreen() {
               {index > 0 && <Divider />}
               <ListItem
                 title={permission.description || permission.name}
-                description={`${permission.name} · cấp ngày ${formatDate(permission.assigned_at)}`}
+                description={`Cấp ngày ${formatDate(permission.assigned_at)}`}
                 trailing={
                   <IconButton icon={X} variant="ghost" accessibilityLabel={`Thu hồi ${permission.name}`} onPress={() => setRevoking(permission)} />
                 }

@@ -46,7 +46,7 @@ export function InfoRow({ label, value, icon, layout = 'inline', className }: In
   return (
     <View className={cn('min-h-11 flex-row items-center gap-3 py-2', className)}>
       {icon && <Icon as={icon} size={18} color="muted" />}
-      <Text tone="muted" className="shrink-0">
+      <Text tone="muted" className="max-w-[48%] shrink">
         {label}
       </Text>
       <View className="flex-1 items-end">{valueNode}</View>

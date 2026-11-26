@@ -26,7 +26,7 @@ export function PreviewImageField({ value, onChange, required, label, error }: {
     } catch { setPickerError('Chưa mở được ảnh. Vui lòng thử lại.'); }
     finally { setBusy(false); }
   };
-  return <FieldShell label={label} required={required} error={error ?? pickerError} hint="Ảnh chỉ dùng để xem thử và không được lưu.">
+  return <FieldShell label={label} required={required} error={error ?? pickerError}>
     <View className="gap-3">
       <Text variant="caption" tone="muted">{value.length} ảnh đã chọn</Text>
       <ImageThumbnailGrid images={value} onRemove={(index) => onChange(value.filter((_, i) => i !== index))} onPress={setViewing} />

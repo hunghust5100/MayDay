@@ -20,7 +20,7 @@ export function useCreateLabRequest(recordId: number | null) {
     mutationFn: (payload: CreateLabRequestPayload) => labsApi.createRequest(payload),
     onSuccess: () => {
       toast.success('Đã lưu yêu cầu xét nghiệm.');
-      void queryClient.invalidateQueries({ queryKey: ['labs', 'results', recordId] });
+      return queryClient.invalidateQueries({ queryKey: ['labs', 'results', recordId] });
     },
   });
 }

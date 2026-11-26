@@ -1,6 +1,7 @@
 import { ShieldCheck } from 'lucide-react-native';
 
 import { SelectField } from '@/shared/form';
+import { Button } from '@/shared/ui';
 
 import { roleTitle, useRoles } from '../hooks/useRbac';
 
@@ -17,16 +18,19 @@ type RoleSelectProps = {
 };
 
 export function RoleSelect({ value, onChange, error, label = 'Vai trò', required = true, disabled, hint, exclude = [] }: RoleSelectProps) {
-  const { data: roles = [], isLoading } = useRoles();
+  const { data: roles = [], isLoading, isError, refetch } = useRoles();
+  if (isError && roles.length === 0) {
+    return <Button title="Tải lại vai trò" variant="soft" onPress={() => void refetch()} />;
+  }
   return (
     <SelectField
       label={label}
       required={required}
       hint={hint}
-      disabled={disabled}
+      disabled={disabled || isLoading}
       leftIcon={ShieldCheck}
       placeholder={isLoading ? 'Đang tải…' : 'Chọn vai trò'}
-      options={roles.filter((r) => !exclude.includes(r.id)).map((r) => ({ value: r.id, label: roleTitle(r), description: r.name }))}
+      options={roles.filter((r) => !exclude.includes(r.id)).map((r) => ({ value: r.id, label: roleTitle(r) }))}
       value={value}
       onChange={onChange}
       error={error}

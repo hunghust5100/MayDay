@@ -20,6 +20,14 @@ export const canEditClinicalRecord = (roleId: number) =>
 export const canCreatePatient = (roleId: number) =>
   roleId === ROLE_IDS.DOCTOR || roleId === ROLE_IDS.NURSE || roleId === ROLE_IDS.HEAD_OF_DEPARTMENT;
 
+/** Quy ước upload_images theo seed; backend kiểm tra quyền hiện hành. */
+export const canUploadMedia = (roleId: number) =>
+  roleId === ROLE_IDS.PATIENT ||
+  roleId === ROLE_IDS.DOCTOR ||
+  roleId === ROLE_IDS.NURSE ||
+  roleId === ROLE_IDS.HEAD_OF_DEPARTMENT ||
+  roleId === ROLE_IDS.INTERN_DOCTOR;
+
 export type RoleGroup = 'admin' | 'staff' | 'patient';
 
 export function getRoleGroup(roleId: number): RoleGroup {

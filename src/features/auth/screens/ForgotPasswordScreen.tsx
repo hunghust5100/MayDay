@@ -36,10 +36,10 @@ export function ForgotPasswordScreen() {
   return (
     <AuthScaffold
       title="Quên mật khẩu"
-      subtitle="Nhập số điện thoại đã đăng ký, chúng tôi sẽ gửi mã OTP qua tin nhắn SMS."
+      subtitle="Nhập số điện thoại đã đăng ký để nhận mã OTP."
       onBack={() => backToLogin()}
       footer={<TextLink prompt="Nhớ ra mật khẩu?" label="Đăng nhập" onPress={() => backToLogin()} />}>
-      <View className="gap-[18px]">
+      <View className="gap-3 roomy:gap-[18px]">
         <FormField
           control={form.control}
           name="phone"

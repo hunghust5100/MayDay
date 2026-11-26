@@ -29,15 +29,15 @@ export function ChangePasswordScreen() {
 
   return (
     <Screen
-      header={<AppHeader title="Đổi mật khẩu" onBack={router.back} />}
+      header={<AppHeader title="Đổi mật khẩu" onBack={() => router.canGoBack() ? router.back() : router.replace('/')} />}
       footer={<Button title="Cập nhật mật khẩu" fullWidth loading={change.isPending} onPress={() => submit()} />}>
       <Card className="flex-row gap-3 border-info-soft bg-info-soft">
         <Icon as={Info} size={20} color="info" />
         <Text variant="caption" className="flex-1 text-info-strong">
-          Sau khi đổi mật khẩu, bạn sẽ được đăng xuất khỏi thiết bị này và cần đăng nhập lại bằng mật khẩu mới.
+          Bạn sẽ đăng nhập lại bằng mật khẩu mới.
         </Text>
       </Card>
-      <View className="mt-5 gap-[18px]">
+      <View className="mt-5 gap-3 roomy:gap-[18px]">
         <FormField
           control={form.control}
           name="old_password"

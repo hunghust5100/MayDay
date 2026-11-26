@@ -40,8 +40,8 @@ export function OtpInput({
 
   return (
     <FieldShell label={label} required={required} hint={hint} error={error} className={className}>
-      <Pressable accessibilityLabel={label ?? 'Mã OTP'} onPress={() => inputRef.current?.focus()}>
-        <View className="flex-row justify-between gap-2">
+      <Pressable accessible={false} onPress={() => inputRef.current?.focus()}>
+        <View aria-hidden className="flex-row justify-between gap-2">
           {Array.from({ length }, (_, index) => {
             const char = value[index] ?? '';
             const active = focused && (index === value.length || (index === length - 1 && value.length === length));
@@ -62,6 +62,7 @@ export function OtpInput({
         </View>
         <TextInput
           ref={inputRef}
+          accessibilityLabel={label ?? 'Mã OTP'}
           value={value}
           onChangeText={handleChange}
           maxLength={length}

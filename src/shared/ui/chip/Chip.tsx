@@ -8,9 +8,9 @@ import { Text } from '../text/Text';
 
 const chip = tv({
   slots: {
-    base: 'h-9 flex-row items-center gap-1.5 self-start rounded-full px-3.5',
-    label: 'font-sans-semibold text-sm',
-    count: 'h-5 min-w-5 items-center justify-center rounded-full px-1.5',
+    base: 'min-h-9 max-w-full flex-row items-center gap-1.5 self-start rounded-full px-3 py-1',
+    label: 'shrink font-sans-semibold text-sm',
+    count: 'min-h-5 min-w-5 items-center justify-center rounded-full px-1.5',
     countLabel: 'font-sans-semibold text-xs',
   },
   variants: {
@@ -68,7 +68,7 @@ export function Chip({ label, variant = 'filter', selected = false, count, icon,
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      className={styles.base({ className: cn('active:opacity-80', className) })}
+      className={styles.base({ className: cn('min-h-[44px] active:opacity-80', className) })}
       {...props}>
       {content}
     </Pressable>
